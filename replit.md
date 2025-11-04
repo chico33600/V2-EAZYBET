@@ -35,6 +35,7 @@ Preferred communication style: Simple, everyday language.
 
 **Key Design Patterns**:
 - Component composition with separation of concerns
+- Shared layout pattern: AppLayout wrapper provides consistent header, navigation, and modals across all pages
 - Custom hooks pattern (though currently minimal)
 - Store-based architecture for cross-component state
 - Mock data simulation for matches and results
@@ -42,9 +43,12 @@ Preferred communication style: Simple, everyday language.
 ### Core Features & Components
 
 **Navigation Structure**:
+- Shared AppLayout component wraps all pages with persistent UI elements
 - Bottom tab navigation with 4 main sections: Home, Classement (Leaderboard), Airdrop, Profil (Profile)
-- Persistent header showing user's coin and diamond balances
-- Floating action button for tap-to-earn modal
+- Fixed header (HeaderCoins) showing user's coin and diamond balances on all pages
+- Floating action button for tap-to-earn modal accessible from any page
+- Centralized TapToEarnModal state management in AppLayout
+- SPA-style navigation with smooth transitions between sections
 
 **Betting System**:
 - Three bet types per match: home win (1), draw (N), away win (2)
@@ -116,9 +120,19 @@ Preferred communication style: Simple, everyday language.
 - Settles bet and distributes winnings if won
 - Can be started/stopped programmatically
 
+### Layout Architecture
+
+**AppLayout Component** (`components/app-layout.tsx`):
+- Wrapper component that provides consistent UI across all pages
+- Manages tap-to-earn modal state at the app level
+- Renders HeaderCoins, BottomNav, FloatingButton, and TapToEarnModal
+- Provides proper spacing (pt-20 pb-24) for fixed header/footer
+- Eliminates code duplication across individual pages
+
 ### Page Structure
 
-- **Home (`/`)**: Match listings with tabs, bet slip, floating tap button
+All pages are wrapped by AppLayout and render only their content:
+- **Home (`/`)**: Match listings with tabs and bet slip
 - **Classement (`/classement`)**: Leaderboard with top players (mock data)
 - **Airdrop (`/airdrop`)**: Information about future crypto token airdrop eligibility
 - **Profil (`/profil`)**: User statistics, achievements, and reset functionality
