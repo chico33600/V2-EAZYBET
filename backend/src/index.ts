@@ -1,19 +1,18 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import healthRoutes from './routes/health';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
 
 app.use(cors());
 app.use(express.json());
 
-app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ status: 'OK', message: 'Backend is running' });
-});
+app.use('/api', healthRoutes);
 
-app.listen(PORT, () => {
-  console.log(`🚀 Backend server running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`EasyBet API running on http://0.0.0.0:${PORT}`);
 });
