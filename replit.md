@@ -189,4 +189,13 @@ All pages are wrapped by AppLayout and render only their content:
 **Icons**:
 - lucide-react
 
-**Note**: The application currently operates entirely client-side with mock data and local storage. Supabase is installed but not configured, suggesting potential future backend integration.
+**Backend API**:
+- Node.js backend in `/backend` folder (separate from frontend)
+- Express.js REST API with TypeScript
+- CORS enabled for frontend communication
+- Supabase client configured for database operations
+- Environment variables managed via `.env` file
+- Development server runs on port 3001
+- Scripts: `npm run dev` (development), `npm run build` (compile), `npm start` (production)
+
+**Note**: The application currently operates entirely client-side with mock data and local storage. Backend API is created but not yet connected to the frontend. Supabase is installed but credentials need to be configured.
