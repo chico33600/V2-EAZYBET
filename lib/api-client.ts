@@ -21,9 +21,9 @@ export async function fetchMatches(status?: string): Promise<Match[]> {
   return data || [];
 }
 
-export async function placeBet(matchId: string, amount: number, choice: 'A' | 'Draw' | 'B') {
+export async function placeBet(matchId: string, amount: number, choice: 'A' | 'Draw' | 'B', currency: 'tokens' | 'diamonds' = 'tokens') {
   if (amount < 10) {
-    throw new Error('Mise minimum : 10 jetons');
+    throw new Error('Mise minimum : 10');
   }
 
   const { data: match } = await supabase
@@ -47,25 +47,40 @@ export async function placeBet(matchId: string, amount: number, choice: 'A' | 'D
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('tokens, total_bets')
+    .select('tokens, diamonds, total_bets')
     .eq('id', user.id)
     .maybeSingle();
 
-  if (!profile || profile.tokens < amount) {
+  if (!profile) {
+    throw new Error('Profil non trouvé');
+  }
+
+  if (currency === 'tokens' && profile.tokens < amount) {
     throw new Error('Jetons insuffisants');
+  }
+
+  if (currency === 'diamonds' && profile.diamonds < amount) {
+    throw new Error('Diamants insuffisants');
   }
 
   const odds = choice === 'A' ? match.odds_a : choice === 'Draw' ? match.odds_draw : match.odds_b;
   const totalWin = Math.round(amount * odds);
   const profit = totalWin - amount;
-  const diamondsFromProfit = Math.round(profit * 0.01);
+  const diamondsFromProfit = currency === 'tokens' ? Math.round(profit * 0.01) : 0;
+
+  const updateData: any = {
+    total_bets: profile.total_bets + 1
+  };
+
+  if (currency === 'tokens') {
+    updateData.tokens = profile.tokens - amount;
+  } else {
+    updateData.diamonds = profile.diamonds - amount;
+  }
 
   await supabase
     .from('profiles')
-    .update({
-      tokens: profile.tokens - amount,
-      total_bets: profile.total_bets + 1
-    })
+    .update(updateData)
     .eq('id', user.id);
 
   const { data: bet, error } = await supabase
@@ -78,17 +93,23 @@ export async function placeBet(matchId: string, amount: number, choice: 'A' | 'D
       odds,
       potential_win: totalWin,
       potential_diamonds: diamondsFromProfit,
+      bet_currency: currency,
     })
     .select()
     .single();
 
   if (error) {
+    const rollbackData: any = {
+      total_bets: profile.total_bets
+    };
+    if (currency === 'tokens') {
+      rollbackData.tokens = profile.tokens;
+    } else {
+      rollbackData.diamonds = profile.diamonds;
+    }
     await supabase
       .from('profiles')
-      .update({
-        tokens: profile.tokens,
-        total_bets: profile.total_bets
-      })
+      .update(rollbackData)
       .eq('id', user.id);
     throw new Error('Erreur lors du pari');
   }

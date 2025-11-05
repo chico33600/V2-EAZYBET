@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useBetStore, useBetSlipUIStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
 import { placeBet } from '@/lib/api-client';
-import { Coins, X } from 'lucide-react';
+import { Coins, X, Gem } from 'lucide-react';
 
 export function BetSlip() {
   const { selections, removeSelection, clearSelections } = useBetStore();
@@ -13,6 +13,7 @@ export function BetSlip() {
   const [amount, setAmount] = useState('');
   const [isPlacing, setIsPlacing] = useState(false);
   const [error, setError] = useState('');
+  const [currency, setCurrency] = useState<'tokens' | 'diamonds'>('tokens');
 
   if (selections.length === 0) return null;
 
@@ -28,13 +29,15 @@ export function BetSlip() {
   };
 
   const betAmount = parseFloat(amount) || 0;
-  const availableBalance = profile?.tokens || 0;
+  const availableTokens = profile?.tokens || 0;
+  const availableDiamonds = profile?.diamonds || 0;
+  const availableBalance = currency === 'tokens' ? availableTokens : availableDiamonds;
   const isCombo = selections.length > 1;
   const selection = selections[0];
 
   const totalWin = Math.round(betAmount * selection.odds);
   const profit = totalWin - betAmount;
-  const potentialDiamonds = Math.round(profit * 0.01);
+  const potentialDiamonds = currency === 'tokens' ? Math.round(profit * 0.01) : 0;
 
   const handlePlaceBet = async () => {
     if (!betAmount || betAmount <= 0 || betAmount > availableBalance) return;
@@ -49,7 +52,7 @@ export function BetSlip() {
     try {
       const choice = selection.betType === 'home' ? 'A' : selection.betType === 'draw' ? 'Draw' : 'B';
 
-      await placeBet(selection.match.id, betAmount, choice);
+      await placeBet(selection.match.id, betAmount, choice, currency);
       await refreshProfile();
 
       if (typeof window !== 'undefined') {
@@ -59,6 +62,7 @@ export function BetSlip() {
       setIsExpanded(false);
       clearSelections();
       setAmount('');
+      setCurrency('tokens');
     } catch (err: any) {
       setError(err.message || 'Erreur lors du placement du pari');
     } finally {
@@ -175,9 +179,53 @@ export function BetSlip() {
 
           {!isCombo && (
             <div className="mb-6">
-              <label className="text-white/70 text-sm mb-2 block">Montant à miser (jetons)</label>
-              <div className="flex items-center gap-2 bg-[#0D1117] rounded-xl p-3 border border-[#30363D] mb-2">
-                <Coins size={20} className="text-[#F5C144]" />
+              <label className="text-white/70 text-sm mb-2 block">Choisir la monnaie</label>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <button
+                  onClick={() => setCurrency('tokens')}
+                  className={`p-4 rounded-xl border-2 transition-all ${
+                    currency === 'tokens'
+                      ? 'bg-[#F5C144]/20 border-[#F5C144] shadow-lg'
+                      : 'bg-[#0D1117] border-[#30363D] hover:border-[#F5C144]/50'
+                  }`}
+                >
+                  <Coins size={24} className={`mx-auto mb-2 ${currency === 'tokens' ? 'text-[#F5C144]' : 'text-white/50'}`} />
+                  <p className={`text-sm font-bold ${currency === 'tokens' ? 'text-white' : 'text-white/70'}`}>
+                    Jetons
+                  </p>
+                  <p className={`text-xs ${currency === 'tokens' ? 'text-white/70' : 'text-white/50'}`}>
+                    {availableTokens.toFixed(0)}
+                  </p>
+                </button>
+                <button
+                  onClick={() => setCurrency('diamonds')}
+                  className={`p-4 rounded-xl border-2 transition-all ${
+                    currency === 'diamonds'
+                      ? 'bg-[#2A84FF]/20 border-[#2A84FF] shadow-lg'
+                      : 'bg-[#0D1117] border-[#30363D] hover:border-[#2A84FF]/50'
+                  }`}
+                >
+                  <Gem size={24} className={`mx-auto mb-2 ${currency === 'diamonds' ? 'text-[#2A84FF]' : 'text-white/50'}`} />
+                  <p className={`text-sm font-bold ${currency === 'diamonds' ? 'text-white' : 'text-white/70'}`}>
+                    Diamants
+                  </p>
+                  <p className={`text-xs ${currency === 'diamonds' ? 'text-white/70' : 'text-white/50'}`}>
+                    {availableDiamonds.toFixed(0)}
+                  </p>
+                </button>
+              </div>
+
+              <label className="text-white/70 text-sm mb-2 block">
+                Montant à miser ({currency === 'tokens' ? 'jetons' : 'diamants'})
+              </label>
+              <div className={`flex items-center gap-2 bg-[#0D1117] rounded-xl p-3 border-2 mb-2 ${
+                currency === 'tokens' ? 'border-[#F5C144]/30' : 'border-[#2A84FF]/30'
+              }`}>
+                {currency === 'tokens' ? (
+                  <Coins size={20} className="text-[#F5C144]" />
+                ) : (
+                  <Gem size={20} className="text-[#2A84FF]" />
+                )}
                 <input
                   type="number"
                   value={amount}
@@ -188,33 +236,51 @@ export function BetSlip() {
                 />
               </div>
               <p className="text-white/50 text-xs">
-                Solde disponible : {availableBalance.toFixed(0)} jetons (min. 10)
+                Solde disponible : {availableBalance.toFixed(0)} {currency === 'tokens' ? 'jetons' : 'diamants'} (min. 10)
               </p>
             </div>
           )}
 
           {betAmount > 0 && !isCombo && (
             <>
-              <div className="bg-gradient-to-r from-[#F5C144]/20 to-[#F5C144]/10 border border-[#F5C144]/30 rounded-2xl p-4 mb-3">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-white/70 text-sm">Gain total si vous gagnez</p>
-                  <p className="text-[#F5C144] font-bold text-2xl">{totalWin}</p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-white/50 text-xs">Profit</p>
-                  <p className="text-green-400 text-sm font-bold">+{profit} jetons</p>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-r from-[#2A84FF]/20 to-[#2A84FF]/10 border border-[#2A84FF]/30 rounded-2xl p-4 mb-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-white/70 text-sm">Bonus diamants (1% du profit)</p>
-                    <p className="text-white/50 text-xs">Si vous gagnez</p>
+              {currency === 'tokens' ? (
+                <>
+                  <div className="bg-gradient-to-r from-[#F5C144]/20 to-[#F5C144]/10 border border-[#F5C144]/30 rounded-2xl p-4 mb-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-white/70 text-sm">Gain total si vous gagnez</p>
+                      <p className="text-[#F5C144] font-bold text-2xl">{totalWin} 💰</p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-white/50 text-xs">Profit en jetons</p>
+                      <p className="text-green-400 text-sm font-bold">+{profit} jetons</p>
+                    </div>
                   </div>
-                  <p className="text-[#2A84FF] font-bold text-2xl">{potentialDiamonds}</p>
+
+                  <div className="bg-gradient-to-r from-[#2A84FF]/20 to-[#2A84FF]/10 border border-[#2A84FF]/30 rounded-2xl p-4 mb-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white/70 text-sm">Bonus diamants (1% du profit)</p>
+                        <p className="text-white/50 text-xs">Si vous gagnez</p>
+                      </div>
+                      <p className="text-[#2A84FF] font-bold text-2xl">{potentialDiamonds} 💎</p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="bg-gradient-to-r from-[#2A84FF]/20 to-[#2A84FF]/10 border border-[#2A84FF]/30 rounded-2xl p-4 mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-white/70 text-sm">Gain total si vous gagnez</p>
+                    <p className="text-[#2A84FF] font-bold text-2xl">{totalWin} 💎</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-white/50 text-xs">Profit en diamants</p>
+                    <p className="text-[#2A84FF] text-sm font-bold">+{profit} diamants</p>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-[#2A84FF]/20">
+                    <p className="text-white/60 text-xs">Pari en diamants = gains en diamants uniquement</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
 

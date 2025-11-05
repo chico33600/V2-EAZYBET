@@ -15,10 +15,20 @@ export async function resolveMatchBets(matchId: string, result: 'A' | 'Draw' | '
 
   for (const bet of bets) {
     const isWin = bet.choice === result;
+    const betCurrency = bet.bet_currency || 'tokens';
 
     if (isWin) {
-      const tokensWon = bet.potential_win;
-      const diamondsWon = bet.potential_diamonds;
+      let tokensWon = 0;
+      let diamondsWon = 0;
+
+      if (betCurrency === 'tokens') {
+        tokensWon = bet.potential_win;
+        diamondsWon = bet.potential_diamonds;
+      } else {
+        tokensWon = 0;
+        diamondsWon = bet.potential_win;
+      }
+
       const newTokens = bet.profiles.tokens + tokensWon;
       const newDiamonds = bet.profiles.diamonds + diamondsWon;
       const newWonBets = bet.profiles.won_bets + 1;
