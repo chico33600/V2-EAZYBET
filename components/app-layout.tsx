@@ -31,6 +31,10 @@ export function AppLayout({ children }: AppLayoutProps) {
     !isExpanded &&
     selections.length === 0;
 
+  if (pathname === '/auth') {
+    return <>{children}</>;
+  }
+
   return (
     <>
       <HeaderCoins onCoinsClick={() => setModalOpen(true)} />
