@@ -52,6 +52,10 @@ export function BetSlip() {
       await placeBet(selection.match.id, betAmount, choice);
       await refreshProfile();
 
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('bet-placed'));
+      }
+
       setIsExpanded(false);
       clearSelections();
       setAmount('');

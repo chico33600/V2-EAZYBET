@@ -6,14 +6,19 @@ import { TabsMatchs } from '@/components/tabs-matchs';
 import { LeagueSection } from '@/components/league-section';
 import { BetSlip } from '@/components/bet-slip';
 import { useAuth } from '@/lib/auth-context';
-import { fetchMatches } from '@/lib/api-client';
+import { fetchMatches, getUserBets } from '@/lib/api-client';
 import type { Match } from '@/lib/supabase-client';
-import { useNavigationStore } from '@/lib/store';
+import { useNavigationStore, useBadgeStore } from '@/lib/store';
+import { ActiveBetCard } from '@/components/active-bet-card';
+import { FinishedBetCard } from '@/components/finished-bet-card';
 
 export default function Home() {
   const { activeHomeTab: activeTab, setActiveHomeTab: setActiveTab } = useNavigationStore();
+  const { hasNewBet, setHasNewBet } = useBadgeStore();
   const [mounted, setMounted] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [activeBets, setActiveBets] = useState<any[]>([]);
+  const [finishedBets, setFinishedBets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -36,13 +41,44 @@ export default function Home() {
       setLoading(false);
     }
 
+    async function loadActiveBets() {
+      setLoading(true);
+      const data = await getUserBets('active');
+      setActiveBets(data);
+      setLoading(false);
+    }
+
+    async function loadFinishedBets() {
+      setLoading(true);
+      const data = await getUserBets('history');
+      setFinishedBets(data);
+      setLoading(false);
+    }
+
     if (user && activeTab === 'upcoming') {
       loadMatches();
+    } else if (user && activeTab === 'played') {
+      loadActiveBets();
+    } else if (user && activeTab === 'finished') {
+      loadFinishedBets();
     } else if (user) {
       setMatches([]);
       setLoading(false);
     }
   }, [activeTab, user]);
+
+  useEffect(() => {
+    const handleBetPlaced = async () => {
+      setHasNewBet(true);
+      if (activeTab === 'played') {
+        const data = await getUserBets('active');
+        setActiveBets(data);
+      }
+    };
+
+    window.addEventListener('bet-placed', handleBetPlaced);
+    return () => window.removeEventListener('bet-placed', handleBetPlaced);
+  }, [activeTab, setHasNewBet]);
 
   if (!mounted || authLoading) {
     return (
@@ -110,30 +146,74 @@ export default function Home() {
     }
 
     if (activeTab === 'played') {
-      return (
-        <div className="mt-6 px-4">
-          <div className="text-center py-16">
-            <div className="bg-[#1A1F27] border border-[#30363D] rounded-2xl p-8 shadow-xl">
-              <p className="text-white text-lg font-semibold mb-2">Paris en cours</p>
-              <p className="text-gray-400 text-sm">
-                Vos paris en cours apparaîtront ici
-              </p>
+      if (loading) {
+        return (
+          <div className="mt-6 px-4">
+            <div className="text-center py-16">
+              <p className="text-white/50">Chargement...</p>
             </div>
+          </div>
+        );
+      }
+
+      if (activeBets.length === 0) {
+        return (
+          <div className="mt-6 px-4">
+            <div className="text-center py-16">
+              <div className="bg-[#1A1F27] border border-[#30363D] rounded-2xl p-8 shadow-xl">
+                <p className="text-white text-lg font-semibold mb-2">Paris en cours</p>
+                <p className="text-gray-400 text-sm">
+                  Aucun pari en cours. Placez votre premier pari !
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="mt-6 px-4 pb-32">
+          <div className="space-y-3">
+            {activeBets.map((bet) => (
+              <ActiveBetCard key={bet.id} bet={bet} />
+            ))}
           </div>
         </div>
       );
     }
 
     if (activeTab === 'finished') {
-      return (
-        <div className="mt-6 px-4">
-          <div className="text-center py-16">
-            <div className="bg-[#1A1F27] border border-[#30363D] rounded-2xl p-8 shadow-xl">
-              <p className="text-white text-lg font-semibold mb-2">Historique</p>
-              <p className="text-gray-400 text-sm">
-                L'historique de vos paris apparaîtra ici
-              </p>
+      if (loading) {
+        return (
+          <div className="mt-6 px-4">
+            <div className="text-center py-16">
+              <p className="text-white/50">Chargement...</p>
             </div>
+          </div>
+        );
+      }
+
+      if (finishedBets.length === 0) {
+        return (
+          <div className="mt-6 px-4">
+            <div className="text-center py-16">
+              <div className="bg-[#1A1F27] border border-[#30363D] rounded-2xl p-8 shadow-xl">
+                <p className="text-white text-lg font-semibold mb-2">Historique</p>
+                <p className="text-gray-400 text-sm">
+                  L'historique de vos paris apparaîtra ici
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="mt-6 px-4 pb-32">
+          <div className="space-y-3">
+            {finishedBets.map((bet) => (
+              <FinishedBetCard key={bet.id} bet={bet} />
+            ))}
           </div>
         </div>
       );
