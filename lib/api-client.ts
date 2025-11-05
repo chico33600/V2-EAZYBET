@@ -134,62 +134,77 @@ export async function getUserBets(status?: 'active' | 'history'): Promise<any[]>
 }
 
 export async function earnTokens(taps: number = 1) {
-  const { data: { user } } = await supabase.auth.getUser();
+  console.log('[earnTokens] ========== START ==========');
+  console.log('[earnTokens] Called with taps:', taps);
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  console.log('[earnTokens] Auth check:', { hasUser: !!user, userId: user?.id, authError });
+
   if (!user) {
+    console.error('[earnTokens] No user found!');
     throw new Error('Non authentifié');
   }
 
-  console.log(`[earnTokens] Called with ${taps} taps`);
-
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  console.log('[earnTokens] Today date:', today.toISOString());
 
-  const { data: todayTaps } = await supabase
+  const { data: todayTaps, error: tapsError } = await supabase
     .from('tap_earnings')
     .select('tokens_earned')
     .eq('user_id', user.id)
     .gte('created_at', today.toISOString());
 
-  const totalTapsToday = todayTaps?.reduce((sum, tap) => sum + tap.tokens_earned, 0) || 0;
-  const totalTapsCountToday = totalTapsToday;
+  console.log('[earnTokens] Today taps query:', { todayTaps, tapsError });
 
-  if (totalTapsCountToday >= 100) {
+  const totalTapsToday = todayTaps?.reduce((sum, tap) => sum + tap.tokens_earned, 0) || 0;
+  console.log('[earnTokens] Total taps today:', totalTapsToday);
+
+  if (totalTapsToday >= 100) {
+    console.error('[earnTokens] Daily limit reached!');
     throw new Error('Limite quotidienne atteinte');
   }
 
-  const remainingTaps = 100 - totalTapsCountToday;
+  const remainingTaps = 100 - totalTapsToday;
   const actualTaps = Math.min(taps, remainingTaps);
   const tokensEarned = actualTaps * 1;
 
-  console.log(`[earnTokens] Tokens to earn: ${tokensEarned}`);
+  console.log('[earnTokens] Calculation:', { remainingTaps, actualTaps, tokensEarned });
 
+  console.log('[earnTokens] Calling increment_tokens RPC...');
   const { data: newBalance, error: updateError } = await supabase
     .rpc('increment_tokens', {
       p_user_id: user.id,
       p_amount: tokensEarned
     });
 
+  console.log('[earnTokens] RPC result:', { newBalance, updateError });
+
   if (updateError) {
-    console.error('[earnTokens] RPC error:', updateError);
-    throw new Error('Erreur lors de la mise à jour des jetons');
+    console.error('[earnTokens] RPC error details:', JSON.stringify(updateError));
+    throw new Error('Erreur lors de la mise à jour des jetons: ' + updateError.message);
   }
 
-  console.log(`[earnTokens] Tokens incremented by ${tokensEarned}, new balance: ${newBalance}`);
-
-  await supabase
+  console.log('[earnTokens] Inserting tap record...');
+  const { error: insertError } = await supabase
     .from('tap_earnings')
     .insert({
       user_id: user.id,
       tokens_earned: tokensEarned,
     });
 
-  console.log(`[earnTokens] Successfully updated tokens to ${newBalance}`);
+  console.log('[earnTokens] Insert result:', { insertError });
 
-  return {
+  const result = {
     tokens_earned: tokensEarned,
     new_balance: newBalance,
     remaining_taps: remainingTaps - actualTaps,
   };
+
+  console.log('[earnTokens] ========== SUCCESS ==========');
+  console.log('[earnTokens] Returning:', result);
+
+  return result;
 }
 
 export async function getLeaderboard(limit: number = 100, offset: number = 0) {
