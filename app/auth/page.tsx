@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 
 export default function AuthPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -9,15 +10,38 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
+  const { signIn, signUp } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
 
-    setTimeout(() => {
-      router.push('/');
-    }, 1000);
+    try {
+      let result;
+      if (mode === 'login') {
+        result = await signIn(email, password);
+      } else {
+        if (username.length < 3) {
+          setError('Le pseudo doit contenir au moins 3 caractères');
+          setIsLoading(false);
+          return;
+        }
+        result = await signUp(email, password, username);
+      }
+
+      if (result.error) {
+        setError(result.error);
+        setIsLoading(false);
+      } else {
+        router.push('/');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Une erreur est survenue');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -99,6 +123,12 @@ export default function AuthPage() {
                 className="w-full px-4 py-3 bg-[#0D1117] border border-[#30363D] rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-[#C1322B] focus:ring-2 focus:ring-[#C1322B]/20 transition-all"
               />
             </div>
+
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-red-400 text-sm">
+                {error}
+              </div>
+            )}
 
             <button
               type="submit"

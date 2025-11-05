@@ -1,18 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { useBetStore, useUserStore, useUserBetsStore, useMatchStatusStore, useBetSlipUIStore, useBadgeStore, UserBet } from '@/lib/store';
-import { Coins, Diamond, X } from 'lucide-react';
+import { useBetStore, useBetSlipUIStore } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
+import { placeBet } from '@/lib/api-client';
+import { Coins, X } from 'lucide-react';
 
 export function BetSlip() {
   const { selections, removeSelection, clearSelections } = useBetStore();
-  const { coins, diamonds, deductCoins, deductDiamonds, addDiamonds } = useUserStore();
-  const { addBet } = useUserBetsStore();
-  const { setMatchStatus } = useMatchStatusStore();
+  const { profile, refreshProfile } = useAuth();
   const { isExpanded, setIsExpanded } = useBetSlipUIStore();
-  const { setHasNewBet } = useBadgeStore();
   const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState<'coins' | 'diamonds'>('coins');
+  const [isPlacing, setIsPlacing] = useState(false);
+  const [error, setError] = useState('');
 
   if (selections.length === 0) return null;
 
@@ -27,50 +27,36 @@ export function BetSlip() {
     }
   };
 
-  const totalOdds = selections.reduce((acc, selection) => acc * selection.odds, 1);
   const betAmount = parseFloat(amount) || 0;
-  const potentialWin = betAmount * totalOdds;
-  const potentialProfit = potentialWin - betAmount;
-  const potentialDiamondsFromCoins = currency === 'coins' ? potentialProfit * 0.01 : 0;
-  const availableBalance = currency === 'coins' ? coins : diamonds;
+  const availableBalance = profile?.tokens || 0;
   const isCombo = selections.length > 1;
+  const selection = selections[0];
+  const potentialDiamonds = Math.round((betAmount * selection.odds) / 10);
 
-  const handlePlaceBet = () => {
+  const handlePlaceBet = async () => {
     if (!betAmount || betAmount <= 0 || betAmount > availableBalance) return;
-
-    if (currency === 'coins') {
-      deductCoins(betAmount);
-    } else {
-      deductDiamonds(betAmount);
+    if (isCombo) {
+      setError('Les paris combinés ne sont pas encore disponibles');
+      return;
     }
 
-    const bet: UserBet = {
-      id: `bet-${Date.now()}-${Math.random()}`,
-      type: isCombo ? 'combo' : 'simple',
-      selections: selections.map(s => ({
-        match: s.match,
-        betType: s.betType,
-        odds: s.odds,
-      })),
-      totalOdds,
-      amount: betAmount,
-      currency,
-      potentialWin,
-      potentialDiamonds: potentialDiamondsFromCoins,
-      status: 'pending',
-      placedAt: Date.now(),
-    };
+    setIsPlacing(true);
+    setError('');
 
-    addBet(bet);
+    try {
+      const choice = selection.betType === 'home' ? 'A' : selection.betType === 'draw' ? 'Draw' : 'B';
 
-    selections.forEach((selection) => {
-      setMatchStatus(selection.match.id, 'played');
-    });
+      await placeBet(selection.match.id, betAmount, choice);
+      await refreshProfile();
 
-    setHasNewBet(true);
-    setIsExpanded(false);
-    clearSelections();
-    setAmount('');
+      setIsExpanded(false);
+      clearSelections();
+      setAmount('');
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors du placement du pari');
+    } finally {
+      setIsPlacing(false);
+    }
   };
 
   const handleRemoveSelection = (matchId: string) => {
@@ -80,40 +66,44 @@ export function BetSlip() {
     }
   };
 
-  const miniView = (
-    <div
-      onClick={() => setIsExpanded(true)}
-      className="fixed bottom-20 left-0 right-0 z-40 px-4 cursor-pointer"
-    >
-      <div className="max-w-2xl mx-auto bg-[#1A1F27] backdrop-blur-lg rounded-t-3xl shadow-2xl border-t border-x border-[#30363D] p-4">
-        {isCombo ? (
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-white/70 text-xs">Pari combiné</p>
-              <p className="text-white font-bold text-sm">{selections.length} sélections</p>
+  if (!isExpanded) {
+    return (
+      <div className="fixed bottom-20 left-0 right-0 z-50 px-4 animate-fade-in">
+        <div
+          onClick={() => setIsExpanded(true)}
+          className="max-w-2xl mx-auto bg-gradient-to-r from-[#C1322B] to-[#8B1F1A] rounded-2xl p-4 shadow-2xl cursor-pointer hover:shadow-3xl transition-all border border-[#F5C144]/20 active:scale-[0.98]"
+        >
+          {isCombo ? (
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-white/70 text-xs">Pari combiné</p>
+                <p className="text-white font-bold text-sm">{selections.length} sélections</p>
+              </div>
+              <div className="text-right">
+                <p className="text-white/70 text-xs">Cote totale</p>
+                <p className="text-[#F5C144] font-bold text-lg">
+                  {selections.reduce((acc, s) => acc * s.odds, 1).toFixed(2)}
+                </p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-white/70 text-xs">Cote totale</p>
-              <p className="text-[#F5C144] font-bold text-lg">{totalOdds.toFixed(2)}</p>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-white/70 text-xs">Sélection</p>
+                <p className="text-white font-bold text-sm">{getBetTypeLabel(selections[0])}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-white/70 text-xs">Cote</p>
+                <p className="text-[#F5C144] font-bold text-lg">{selections[0].odds.toFixed(2)}</p>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-white/70 text-xs">Sélection</p>
-              <p className="text-white font-bold text-sm">{getBetTypeLabel(selections[0])}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-white/70 text-xs">Cote</p>
-              <p className="text-[#F5C144] font-bold text-lg">{selections[0].odds.toFixed(2)}</p>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
-  const expandedView = (
+  return (
     <div className="fixed inset-0 z-[100] flex items-end">
       <div
         onClick={() => setIsExpanded(false)}
@@ -141,142 +131,89 @@ export function BetSlip() {
             </button>
           </div>
 
+          {isCombo && (
+            <div className="bg-yellow-500/10 border border-yellow-500/50 rounded-xl p-3 mb-4">
+              <p className="text-yellow-400 text-sm">Les paris combinés ne sont pas encore disponibles</p>
+            </div>
+          )}
+
           <div className="space-y-3 mb-6">
-            {selections.map((selection, index) => (
+            {selections.map((sel, index) => (
               <div
-                key={`${selection.match.id}-${selection.betType}`}
+                key={`${sel.match.id}-${sel.betType}`}
                 className="bg-[#0D1117] rounded-2xl p-4 transition-all duration-300 animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
-                    <p className="text-white/50 text-xs mb-1">{selection.match.league}</p>
+                    <p className="text-white/50 text-xs mb-1">{sel.match.league}</p>
                     <p className="text-white font-semibold text-sm">
-                      {selection.match.homeTeam} vs {selection.match.awayTeam}
+                      {sel.match.homeTeam} vs {sel.match.awayTeam}
                     </p>
                   </div>
                   <button
-                    onClick={() => handleRemoveSelection(selection.match.id)}
+                    onClick={() => handleRemoveSelection(sel.match.id)}
                     className="text-white/50 hover:text-[#C1322B] transition-colors ml-2"
                   >
                     <X size={18} />
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <p className="text-[#F5C144] font-medium text-sm">{getBetTypeLabel(selection)}</p>
-                  <p className="text-[#F5C144] font-bold text-xl">@{selection.odds.toFixed(2)}</p>
+                  <p className="text-[#F5C144] font-medium text-sm">{getBetTypeLabel(sel)}</p>
+                  <p className="text-[#F5C144] font-bold text-xl">@{sel.odds.toFixed(2)}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          {isCombo && (
-            <div className="bg-gradient-to-r from-[#C1322B]/20 to-[#C1322B]/10 border border-[#C1322B]/30 rounded-2xl p-4 mb-6">
+          {!isCombo && (
+            <div className="mb-6">
+              <label className="text-white/70 text-sm mb-2 block">Montant à miser (jetons)</label>
+              <div className="flex items-center gap-2 bg-[#0D1117] rounded-xl p-3 border border-[#30363D] mb-2">
+                <Coins size={20} className="text-[#F5C144]" />
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="Entrez votre mise"
+                  min="10"
+                  className="flex-1 bg-transparent text-white text-lg font-bold focus:outline-none"
+                />
+              </div>
+              <p className="text-white/50 text-xs">
+                Solde disponible : {availableBalance.toFixed(0)} jetons (min. 10)
+              </p>
+            </div>
+          )}
+
+          {betAmount > 0 && !isCombo && (
+            <div className="bg-gradient-to-r from-[#2A84FF]/20 to-[#2A84FF]/10 border border-[#2A84FF]/30 rounded-2xl p-4 mb-6">
               <div className="flex items-center justify-between">
-                <p className="text-white font-semibold">Cote combinée</p>
-                <p className="text-[#C1322B] font-bold text-2xl">{totalOdds.toFixed(2)}</p>
+                <p className="text-white/70 text-sm">Diamants potentiels</p>
+                <p className="text-[#2A84FF] font-bold text-2xl">{potentialDiamonds}</p>
               </div>
             </div>
           )}
 
-          <div className="mb-6">
-            <label className="text-white/70 text-sm mb-3 block">Parier avec</label>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <button
-                onClick={() => setCurrency('coins')}
-                className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-200 ${
-                  currency === 'coins'
-                    ? 'bg-gradient-to-r from-[#F5C144] to-[#E5B134] text-black shadow-lg scale-105'
-                    : 'bg-[#0D1117] text-white/70 border border-[#30363D] hover:border-[#F5C144]/50'
-                }`}
-              >
-                <Coins size={20} className={currency === 'coins' ? 'text-black' : 'text-[#F5C144]'} />
-                <span className="font-semibold">Jetons</span>
-              </button>
-              <button
-                onClick={() => setCurrency('diamonds')}
-                className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-200 ${
-                  currency === 'diamonds'
-                    ? 'bg-gradient-to-r from-[#2A84FF] to-[#1A74EF] text-white shadow-lg scale-105'
-                    : 'bg-[#0D1117] text-white/70 border border-[#30363D] hover:border-[#2A84FF]/50'
-                }`}
-              >
-                <Diamond size={20} className={currency === 'diamonds' ? 'text-white' : 'text-[#2A84FF]'} />
-                <span className="font-semibold">Diamants</span>
-              </button>
-            </div>
-            <label className="text-white/70 text-sm mb-2 block">Montant à miser</label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              className="w-full bg-[#0D1117] text-white text-2xl font-bold rounded-2xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-[#C1322B] border border-[#30363D]"
-            />
-            <p className="text-white/50 text-xs mt-2">
-              Solde disponible : {availableBalance.toFixed(2)} {currency === 'coins' ? 'jetons' : 'diamants'}
-            </p>
-          </div>
-
-          {betAmount > 0 && (
-            <div className="space-y-3 mb-6 animate-fade-in">
-              {currency === 'coins' ? (
-                <>
-                  <div className="bg-gradient-to-r from-[#F5C144]/20 to-[#F5C144]/10 border border-[#F5C144]/30 rounded-2xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Coins size={20} className="text-[#F5C144]" />
-                        <p className="text-white/70 text-sm">Gain potentiel en jetons</p>
-                      </div>
-                      <p className="text-[#F5C144] font-bold text-2xl">{potentialWin.toFixed(2)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-white/50 text-xs">Profit : +{potentialProfit.toFixed(2)} jetons</p>
-                    </div>
-                  </div>
-                  <div className="bg-gradient-to-r from-[#2A84FF]/20 to-[#2A84FF]/10 border border-[#2A84FF]/30 rounded-2xl p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Diamond size={20} className="text-[#2A84FF]" />
-                        <p className="text-white/70 text-sm">Bonus en diamants</p>
-                      </div>
-                      <p className="text-[#2A84FF] font-bold text-2xl">+{potentialDiamondsFromCoins.toFixed(2)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-white/50 text-xs">1% du profit converti en diamants</p>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="bg-gradient-to-r from-[#2A84FF]/20 to-[#2A84FF]/10 border border-[#2A84FF]/30 rounded-2xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Diamond size={20} className="text-[#2A84FF]" />
-                      <p className="text-white/70 text-sm">Gain potentiel en diamants</p>
-                    </div>
-                    <p className="text-[#2A84FF] font-bold text-2xl">{potentialWin.toFixed(2)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-white/50 text-xs">Profit : +{potentialProfit.toFixed(2)} diamants</p>
-                  </div>
-                </div>
-              )}
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-3 mb-4">
+              <p className="text-red-400 text-sm">{error}</p>
             </div>
           )}
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-6 pt-10 bg-gradient-to-t from-[#1A1F27] from-70% via-[#1A1F27] via-40% to-transparent shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-          <button
-            onClick={handlePlaceBet}
-            disabled={!amount || betAmount <= 0 || betAmount > availableBalance}
-            className="w-full bg-gradient-to-r from-[#F5C144] to-[#E5B134] hover:from-[#E5B134] hover:to-[#D5A124] text-black font-bold py-5 rounded-2xl shadow-2xl transition-all duration-300 ease-in-out active:scale-95 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Valider le pari
-          </button>
-        </div>
+        {!isCombo && (
+          <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#1A1F27] via-[#1A1F27] to-transparent">
+            <button
+              onClick={handlePlaceBet}
+              disabled={!betAmount || betAmount <= 0 || betAmount > availableBalance || isPlacing}
+              className="w-full py-4 bg-gradient-to-r from-[#C1322B] to-[#8B1F1A] text-white font-bold text-lg rounded-2xl shadow-xl hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-xl active:scale-[0.98]"
+            >
+              {isPlacing ? 'Placement en cours...' : 'Placer le pari'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
-
-  return isExpanded ? expandedView : miniView;
 }

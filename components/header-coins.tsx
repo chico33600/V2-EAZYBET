@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUserStore } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
 import { Coins, Diamond } from 'lucide-react';
 
 interface HeaderCoinsProps {
@@ -11,15 +11,15 @@ interface HeaderCoinsProps {
 
 export function HeaderCoins({ onCoinsClick }: HeaderCoinsProps) {
   const [mounted, setMounted] = useState(false);
-  const userStore = useUserStore();
+  const { profile } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const coins = mounted ? userStore.coins : 0;
-  const diamonds = mounted ? userStore.diamonds : 0;
+  const coins = mounted && profile ? profile.tokens : 0;
+  const diamonds = mounted && profile ? profile.diamonds : 0;
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-4 pb-3 header-blur border-b border-[#30363D]/30">
@@ -29,7 +29,9 @@ export function HeaderCoins({ onCoinsClick }: HeaderCoinsProps) {
           aria-label="Aller au profil"
           className="w-10 h-10 rounded-full bg-gradient-to-br from-[#C1322B] to-[#8B1F1A] flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all active:scale-95"
         >
-          <span className="text-white font-bold text-lg">M</span>
+          <span className="text-white font-bold text-lg">
+            {profile?.username?.charAt(0).toUpperCase() || 'U'}
+          </span>
         </button>
 
         <div className="flex items-center gap-2">

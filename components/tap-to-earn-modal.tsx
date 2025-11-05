@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useUserStore } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
+import { earnTokens } from '@/lib/api-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
@@ -31,7 +32,7 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
   const [flyingCoins, setFlyingCoins] = useState<FlyingCoin[]>([]);
   const [isCollecting, setIsCollecting] = useState(false);
   const [showButton, setShowButton] = useState(true);
-  const addCoins = useUserStore((state) => state.addCoins);
+  const { refreshProfile } = useAuth();
 
   const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
     if (activeTaps >= 3) return;
@@ -68,7 +69,7 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
     }, 300);
   };
 
-  const handleCollect = () => {
+  const handleCollect = async () => {
     if (isCollecting || tapCount === 0) return;
 
     setIsCollecting(true);
@@ -87,9 +88,12 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
 
     setFlyingCoins(newCoins);
 
-    setTimeout(() => {
-      addCoins(tapCount);
-    }, 400);
+    try {
+      await earnTokens(tapCount);
+      await refreshProfile();
+    } catch (error: any) {
+      console.error('Error earning tokens:', error);
+    }
 
     setTimeout(() => {
       setFlyingCoins([]);
