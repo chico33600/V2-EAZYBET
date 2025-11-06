@@ -7,14 +7,12 @@ export interface TeamImageData {
 export const TEAM_IMAGES: { [key: string]: TeamImageData } = {
   // Ligue 1 (France)
   'PSG': {
-    badge: 'https://www.thesportsdb.com/images/media/team/badge/xr7oqz1473502346.png',
-    banner: 'https://www.thesportsdb.com/images/media/team/banner/rsyuyu1420811750.jpg',
-    stadium: 'https://www.thesportsdb.com/images/media/team/stadium/pxvpuv1420813256.jpg'
+    badge: 'https://res.cloudinary.com/ddo7omht1/image/upload/v1762449174/PSG_wtg0px.png',
+    banner: 'https://res.cloudinary.com/ddo7omht1/image/upload/v1762449174/PSG_wtg0px.png',
   },
   'Paris Saint Germain': {
-    badge: 'https://www.thesportsdb.com/images/media/team/badge/xr7oqz1473502346.png',
-    banner: 'https://www.thesportsdb.com/images/media/team/banner/rsyuyu1420811750.jpg',
-    stadium: 'https://www.thesportsdb.com/images/media/team/stadium/pxvpuv1420813256.jpg'
+    badge: 'https://res.cloudinary.com/ddo7omht1/image/upload/v1762449174/PSG_wtg0px.png',
+    banner: 'https://res.cloudinary.com/ddo7omht1/image/upload/v1762449174/PSG_wtg0px.png',
   },
   'Marseille': {
     badge: 'https://www.thesportsdb.com/images/media/team/badge/xqrvrs1421431957.png',

@@ -2,6 +2,7 @@
 
 import { Match } from '@/lib/mock-data';
 import { useBetStore, BetType } from '@/lib/store';
+import { TEAM_IMAGES } from '@/lib/team-images-static';
 import Image from 'next/image';
 
 interface MatchCardProps {
@@ -20,7 +21,10 @@ export function MatchCard({ match }: MatchCardProps) {
     return selections.some(s => s.match.id === match.id && s.betType === betType);
   };
 
-  const backgroundImage = 'https://images.pexels.com/photos/274506/pexels-photo-274506.jpeg';
+  const backgroundImage =
+    TEAM_IMAGES[match.homeTeam]?.banner ||
+    TEAM_IMAGES[match.awayTeam]?.banner ||
+    'https://images.pexels.com/photos/399187/pexels-photo-399187.jpeg';
 
   return (
     <div className="relative rounded-3xl overflow-hidden card-shadow border border-[#30363D] h-[360px]">
