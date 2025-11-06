@@ -1,6 +1,16 @@
 import { NextRequest } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase-client';
 import { createErrorResponse, createSuccessResponse } from '@/lib/auth-utils';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
 
 interface OddsAPIMatch {
   id: string;
@@ -30,17 +40,22 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
       return createErrorResponse('Unauthorized', 401);
     }
 
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .maybeSingle();
+
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+      return createErrorResponse('Failed to fetch user profile', 500);
+    }
 
     if (!profile || profile.role !== 'admin') {
       return createErrorResponse('Access denied: Admin role required', 403);
@@ -95,7 +110,7 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        const { data: existingMatch } = await supabase
+        const { data: existingMatch } = await supabaseAdmin
           .from('matches')
           .select('id')
           .eq('external_api_id', match.id)
@@ -103,7 +118,7 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
 
         if (existingMatch) {
-          const { error: updateError } = await supabase
+          const { error: updateError } = await supabaseAdmin
             .from('matches')
             .update({
               odds_a: oddsA,
@@ -121,7 +136,7 @@ export async function POST(request: NextRequest) {
             updatedCount++;
           }
         } else {
-          const { error: insertError } = await supabase
+          const { error: insertError } = await supabaseAdmin
             .from('matches')
             .insert({
               team_a: match.home_team,
