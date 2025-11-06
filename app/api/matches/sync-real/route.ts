@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createErrorResponse, createSuccessResponse } from '@/lib/auth-utils';
-import { getTeamImagesFromWikimedia } from '@/lib/wikimedia-service';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -45,18 +44,6 @@ const COMPETITIONS: Competition[] = [
 
 export async function POST(request: NextRequest) {
   try {
-    return createSuccessResponse({
-      message: '⚠️ Synchronisation API temporairement désactivée. Les requêtes vers l\'API externe The Odds sont bloquées dans cet environnement. Utilisez le bouton "Matchs Demo" pour ajouter des matchs de test.',
-      stats: {
-        competitions: 0,
-        synced: 0,
-        updated: 0,
-        skipped: 0,
-        errors: 0,
-      },
-    });
-
-    /* DÉSACTIVÉ - L'API externe ne fonctionne pas dans cet environnement
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return createErrorResponse('Unauthorized', 401);
@@ -113,18 +100,10 @@ export async function POST(request: NextRequest) {
       try {
         const apiUrl = `https://api.the-odds-api.com/v4/sports/${competition.sportKey}/odds/?regions=eu&markets=h2h&apiKey=${apiKey}`;
 
-        console.log(`Fetching ${competition.name}...`);
-
-        const response = await fetch(apiUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
-        });
+        const response = await fetch(apiUrl);
 
         if (!response.ok) {
-          console.error(`Odds API error for ${competition.name}:`, response.status, response.statusText);
-          totalErrorCount++;
+          console.error(`Odds API error for ${competition.name}:`, response.statusText);
           continue;
         }
 
@@ -184,9 +163,6 @@ export async function POST(request: NextRequest) {
                 totalUpdatedCount++;
               }
             } else {
-              const teamAImages = await getTeamImagesFromWikimedia(match.home_team, supabase);
-              const teamBImages = await getTeamImagesFromWikimedia(match.away_team, supabase);
-
               const { error: insertError } = await supabase
                 .from('matches')
                 .insert({
@@ -201,12 +177,6 @@ export async function POST(request: NextRequest) {
                   match_mode: 'real',
                   external_api_id: match.id,
                   api_provider: 'the-odds-api',
-                  team_a_badge: teamAImages?.badge || null,
-                  team_a_banner: teamAImages?.banner || null,
-                  team_a_stadium: teamAImages?.stadium || null,
-                  team_b_badge: teamBImages?.badge || null,
-                  team_b_banner: teamBImages?.banner || null,
-                  team_b_stadium: teamBImages?.stadium || null,
                 });
 
               if (insertError) {
@@ -222,12 +192,10 @@ export async function POST(request: NextRequest) {
           }
         }
       } catch (err) {
-        console.error(`Error fetching ${competition.name}:`, err instanceof Error ? err.message : err);
+        console.error(`Error fetching ${competition.name}:`, err);
         totalErrorCount++;
       }
     }
-
-    console.log(`Sync complete: ${totalSyncedCount} synced, ${totalUpdatedCount} updated, ${totalSkippedCount} skipped, ${totalErrorCount} errors`);
 
     const { error: statusUpdateError } = await supabase
       .from('matches')
@@ -240,28 +208,14 @@ export async function POST(request: NextRequest) {
       console.error('Status update error:', statusUpdateError);
     }
 
-    try {
-      const { error: deleteOldError1 } = await supabase
-        .from('matches')
-        .delete()
-        .eq('match_mode', 'real')
-        .lt('match_date', now.toISOString());
+    const { error: deleteOldError } = await supabase
+      .from('matches')
+      .delete()
+      .eq('match_mode', 'real')
+      .or(`match_date.lt.${now.toISOString()},match_date.gt.${sevenDaysFromNow.toISOString()}`);
 
-      if (deleteOldError1) {
-        console.error('Delete old matches (past) error:', deleteOldError1);
-      }
-
-      const { error: deleteOldError2 } = await supabase
-        .from('matches')
-        .delete()
-        .eq('match_mode', 'real')
-        .gt('match_date', sevenDaysFromNow.toISOString());
-
-      if (deleteOldError2) {
-        console.error('Delete old matches (future) error:', deleteOldError2);
-      }
-    } catch (err) {
-      console.error('Delete old matches error:', err);
+    if (deleteOldError) {
+      console.error('Delete old matches error:', deleteOldError);
     }
 
     return createSuccessResponse({
@@ -274,7 +228,6 @@ export async function POST(request: NextRequest) {
         errors: totalErrorCount,
       },
     });
-    */
 
   } catch (error: any) {
     console.error('Sync error:', error);

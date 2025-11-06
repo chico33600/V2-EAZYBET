@@ -11,12 +11,6 @@ export interface Match {
   homeScore?: number;
   awayScore?: number;
   imageUrl?: string;
-  teamABadge?: string | null;
-  teamBBadge?: string | null;
-  teamABanner?: string | null;
-  teamBBanner?: string | null;
-  teamAStadium?: string | null;
-  teamBStadium?: string | null;
 }
 
 export const mockMatches: Match[] = [

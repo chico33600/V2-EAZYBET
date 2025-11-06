@@ -39,12 +39,6 @@ export interface Match {
   match_date: string;
   created_at: string;
   updated_at: string;
-  team_a_badge?: string | null;
-  team_b_badge?: string | null;
-  team_a_banner?: string | null;
-  team_b_banner?: string | null;
-  team_a_stadium?: string | null;
-  team_b_stadium?: string | null;
 }
 
 export interface Bet {
