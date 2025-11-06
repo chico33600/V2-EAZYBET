@@ -55,7 +55,16 @@ export default function ProfilPage() {
     }
   };
 
-  const handleClaimReward = async (achievementId: string, link: string | null) => {
+  const handleClaimReward = async (achievementId: string, link: string | null, reward: number) => {
+    const achievementIndex = achievements.findIndex(a => a.id === achievementId);
+    if (achievementIndex === -1 || achievements[achievementIndex].claimed) {
+      return;
+    }
+
+    setAchievements(prev => prev.map(a =>
+      a.id === achievementId ? { ...a, claimed: true } : a
+    ));
+
     if (link) {
       window.open(link, '_blank');
     }
@@ -66,6 +75,9 @@ export default function ProfilPage() {
 
       if (!token) {
         alert('Session expirée, veuillez vous reconnecter');
+        setAchievements(prev => prev.map(a =>
+          a.id === achievementId ? { ...a, claimed: false } : a
+        ));
         return;
       }
 
@@ -81,15 +93,22 @@ export default function ProfilPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.error || 'Erreur lors de la réclamation');
+        setAchievements(prev => prev.map(a =>
+          a.id === achievementId ? { ...a, claimed: false } : a
+        ));
+        if (!data.error?.includes('déjà récupéré')) {
+          alert(data.error || 'Erreur lors de la réclamation');
+        }
         return;
       }
 
-      alert(`+${data.reward} 💰 ajoutés à votre compte !`);
+      alert(`+${reward} 💰 ajoutés à votre compte !`);
       await refreshProfile();
-      await loadAchievements();
       window.dispatchEvent(new Event('profile-updated'));
     } catch (error: any) {
+      setAchievements(prev => prev.map(a =>
+        a.id === achievementId ? { ...a, claimed: false } : a
+      ));
       alert('Erreur lors de la réclamation de la récompense');
     }
   };
@@ -210,7 +229,7 @@ export default function ProfilPage() {
                       <span className="text-green-400 text-sm font-semibold">🎉 Réclamée</span>
                     ) : (
                       <button
-                        onClick={() => handleClaimReward(achievement.id, achievement.link)}
+                        onClick={() => handleClaimReward(achievement.id, achievement.link, achievement.reward)}
                         className="bg-[#F5C144] hover:bg-[#E5B134] text-black font-semibold px-4 py-2 rounded-xl transition-colors flex items-center gap-2"
                       >
                         Récupérer
