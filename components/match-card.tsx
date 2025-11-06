@@ -55,6 +55,21 @@ export function MatchCard({ match }: MatchCardProps) {
     if (normalized.includes("valence") || normalized.includes("valencia")) return "Valencia";
     if (normalized.includes("villarreal")) return "Villarreal";
 
+    // 🇬🇧 Premier League
+    if (normalized.includes("arsenal")) return "Arsenal";
+    if (normalized.includes("aston")) return "Aston Villa";
+    if (normalized.includes("bournemouth")) return "Bournemouth";
+    if (normalized.includes("chelsea")) return "Chelsea";
+    if (normalized.includes("palace")) return "Crystal Palace";
+    if (normalized.includes("everton")) return "Everton";
+    if (normalized.includes("liverpool")) return "Liverpool";
+    if (normalized.includes("city") && normalized.includes("manchester")) return "Manchester City";
+    if (normalized.includes("united") && normalized.includes("manchester")) return "Manchester United";
+    if (normalized.includes("newcastle")) return "Newcastle";
+    if (normalized.includes("sunderland")) return "Sunderland";
+    if (normalized.includes("tottenham") || normalized.includes("spurs")) return "Tottenham";
+    if (normalized.includes("west") && normalized.includes("ham")) return "West Ham";
+
     return name;
   };
 

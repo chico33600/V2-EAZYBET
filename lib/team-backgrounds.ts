@@ -27,5 +27,20 @@ export const TEAM_BACKGROUNDS: Record<string, string> = {
   "Real Betis": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762454748/Real_Betis_of0rdk.png",
   "Real Sociedad": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762454739/Real_Sociedad_qbtk2c.png",
   "Valencia": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762454729/Valencia_gtyeak.png",
-  "Villarreal": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762454550/Villareal_qhtfy1.png"
+  "Villarreal": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762454550/Villareal_qhtfy1.png",
+
+  // 🏴🇬🇧 Premier League
+  "Arsenal": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762457222/Arsenal_h8jrmg.png",
+  "Aston Villa": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762457232/Aston_Villa_g85zwz.png",
+  "Bournemouth": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762457242/Bournemouth_tv2wdk.png",
+  "Chelsea": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762457257/Chelsea_pyebfh.png",
+  "Crystal Palace": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762457275/Crystale_Palace_f5hym6.png",
+  "Everton": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762457285/Everton_pocwsp.png",
+  "Liverpool": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762457292/Liverpool_cphe9z.png",
+  "Manchester City": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762457300/Manchester_city_curmlg.png",
+  "Manchester United": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762457318/Manchester_United_uzp4pw.png",
+  "Newcastle": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762457331/Newcastle_wit3i3.png",
+  "Sunderland": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762457339/Sunderland_e9m2jv.png",
+  "Tottenham": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762457348/Totthenam_ixea6c.png",
+  "West Ham": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762457358/West_Ham_dexnhw.png"
 };
