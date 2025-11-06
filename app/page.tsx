@@ -134,6 +134,12 @@ export default function Home() {
         minute: '2-digit'
       }),
       status: match.status || 'upcoming',
+      teamABadge: match.team_a_badge,
+      teamBBadge: match.team_b_badge,
+      teamABanner: match.team_a_banner,
+      teamBBanner: match.team_b_banner,
+      teamAStadium: match.team_a_stadium,
+      teamBStadium: match.team_b_stadium,
     };
 
     if (existing) {

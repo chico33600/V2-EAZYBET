@@ -20,10 +20,12 @@ export function MatchCard({ match }: MatchCardProps) {
     return selections.some(s => s.match.id === match.id && s.betType === betType);
   };
 
+  const backgroundImage = 'https://images.pexels.com/photos/274506/pexels-photo-274506.jpeg';
+
   return (
     <div className="relative rounded-3xl overflow-hidden card-shadow border border-[#30363D] h-[360px]">
       <Image
-        src={match.imageUrl || 'https://images.pexels.com/photos/274506/pexels-photo-274506.jpeg'}
+        src={backgroundImage}
         alt={`${match.homeTeam} vs ${match.awayTeam}`}
         fill
         className="object-cover"
@@ -50,13 +52,20 @@ export function MatchCard({ match }: MatchCardProps) {
           </div>
           <div className="flex items-center justify-between mb-4">
             <div className="text-center flex-1">
-              <p className="text-white font-bold text-lg">{match.homeTeam}</p>
+              <div className="flex flex-col items-center gap-2 mb-1">
+                <div className="w-14 h-14 bg-gradient-to-br from-white/20 to-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/20">
+                  <span className="text-white font-bold text-lg">
+                    {match.homeTeam.substring(0, 3).toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-white font-bold text-base leading-tight">{match.homeTeam}</p>
+              </div>
               {isFinished && (
                 <p className="text-[#F5C144] font-bold text-3xl mt-1">{match.homeScore}</p>
               )}
             </div>
 
-            <div className="px-4">
+            <div className="px-3">
               {isFinished ? (
                 <p className="text-white/50 font-bold text-2xl">-</p>
               ) : (
@@ -65,7 +74,14 @@ export function MatchCard({ match }: MatchCardProps) {
             </div>
 
             <div className="text-center flex-1">
-              <p className="text-white font-bold text-lg">{match.awayTeam}</p>
+              <div className="flex flex-col items-center gap-2 mb-1">
+                <div className="w-14 h-14 bg-gradient-to-br from-white/20 to-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/20">
+                  <span className="text-white font-bold text-lg">
+                    {match.awayTeam.substring(0, 3).toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-white font-bold text-base leading-tight">{match.awayTeam}</p>
+              </div>
               {isFinished && (
                 <p className="text-[#F5C144] font-bold text-3xl mt-1">{match.awayScore}</p>
               )}
