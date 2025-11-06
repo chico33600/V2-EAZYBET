@@ -101,6 +101,22 @@ export function MatchCard({ match }: MatchCardProps) {
     if (normalized.includes("dortmund")) return "Borussia Dortmund";
     if (normalized.includes("monchengladbach") || normalized.includes("gladbach")) return "Borussia Monchengladbach";
 
+    // 🌍 European Clubs
+    if (normalized.includes("sporting")) return "Sporting CP";
+    if (normalized.includes("shakhtar") || normalized.includes("donetsk")) return "Shakhtar Donetsk";
+    if (normalized.includes("salzburg")) return "RB Salzbourg";
+    if (normalized.includes("rayo")) return "Rayo Vallecano";
+    if (normalized.includes("rangers")) return "Rangers";
+    if (normalized.includes("psv")) return "PSV Eindhoven";
+    if (normalized.includes("galatasaray")) return "Galatasaray";
+    if (normalized.includes("feyenoord") || normalized.includes("feyenord")) return "Feyenoord";
+    if (normalized.includes("fener") || normalized.includes("bahce")) return "Fenerbahçe";
+    if (normalized.includes("porto")) return "FC Porto";
+    if (normalized.includes("brugge") || normalized.includes("bruge")) return "Club Brugge";
+    if (normalized.includes("braga")) return "SC Braga";
+    if (normalized.includes("benfica")) return "Benfica";
+    if (normalized.includes("ajax")) return "Ajax";
+
     return name;
   };
 

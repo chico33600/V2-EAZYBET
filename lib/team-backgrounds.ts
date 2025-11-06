@@ -73,5 +73,21 @@ export const TEAM_BACKGROUNDS: Record<string, string> = {
   "Union Berlin": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762461614/Union_berlin_amhza6.png",
   "VfL Wolfsburg": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762461624/Wolfsburg_feownu.png",
   "Borussia Dortmund": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762462101/Borussia_Dortmund_sbcbuj.png",
-  "Borussia Monchengladbach": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762462382/Borussia_Monchengladbach_gr3hlp.png"
+  "Borussia Monchengladbach": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762462382/Borussia_Monchengladbach_gr3hlp.png",
+
+  // 🌍 European Clubs
+  "Sporting CP": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762464080/Sporting_ylddk6.png",
+  "Shakhtar Donetsk": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762464070/Shaktar_Donesk_pkbwjw.png",
+  "RB Salzbourg": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762464026/RB_Salzbourg_x0ovus.png",
+  "Rayo Vallecano": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762464014/Rayo_Vallecano_eyxw1u.png",
+  "Rangers": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762464003/Rangers_evagoy.png",
+  "PSV Eindhoven": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762463991/PSV_gifzg4.png",
+  "Galatasaray": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762463980/Galatasaray_yro0hv.png",
+  "Feyenoord": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762463970/Feyenord_j4pofi.png",
+  "Fenerbahçe": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762463955/Fenerbahce_ou4kkl.png",
+  "FC Porto": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762463942/FC_Porto_jcc0lf.png",
+  "Club Brugge": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762463931/Club_Bruge_rfz8aa.png",
+  "SC Braga": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762463916/Braga_xt7yhy.png",
+  "Benfica": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762463905/Benfica_jocktn.png",
+  "Ajax": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762463893/Ajax_wlh0xm.png"
 };
