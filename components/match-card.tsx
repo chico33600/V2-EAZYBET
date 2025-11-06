@@ -20,8 +20,29 @@ export function MatchCard({ match }: MatchCardProps) {
     return selections.some(s => s.match.id === match.id && s.betType === betType);
   };
 
-  const homeBackground = TEAM_BACKGROUNDS[match.homeTeam];
-  const awayBackground = TEAM_BACKGROUNDS[match.awayTeam];
+  const normalizeTeamName = (name: string) => {
+    if (!name) return "";
+    const normalized = name.trim().toLowerCase();
+    if (normalized.includes("marseille")) return "Olympique de Marseille";
+    if (normalized.includes("lyon")) return "Olympique Lyonnais";
+    if (normalized.includes("lille")) return "LOSC Lille";
+    if (normalized.includes("nice")) return "OGC Nice";
+    if (normalized.includes("nantes")) return "FC Nantes";
+    if (normalized.includes("rennes")) return "Stade Rennais";
+    if (normalized.includes("monaco")) return "AS Monaco";
+    if (normalized.includes("strasbourg")) return "RC Strasbourg";
+    if (normalized.includes("toulouse")) return "Toulouse FC";
+    if (normalized.includes("lens")) return "RC Lens";
+    if (normalized.includes("paris") && normalized.includes("fc")) return "Paris FC";
+    if (normalized.includes("paris") || normalized.includes("psg")) return "Paris Saint-Germain";
+    return name;
+  };
+
+  const homeTeamNormalized = normalizeTeamName(match.homeTeam);
+  const awayTeamNormalized = normalizeTeamName(match.awayTeam);
+
+  const homeBackground = TEAM_BACKGROUNDS[homeTeamNormalized];
+  const awayBackground = TEAM_BACKGROUNDS[awayTeamNormalized];
 
   const backgroundImage =
     homeBackground ||
