@@ -25,11 +25,15 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real'): Promise<M
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
+  const now = new Date();
+  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
   let query = supabase
     .from('matches')
     .select('*')
     .eq('status', 'upcoming')
-    .gt('match_date', new Date().toISOString())
+    .gt('match_date', now.toISOString())
+    .lte('match_date', sevenDaysFromNow.toISOString())
     .order('match_date', { ascending: true });
 
   if (mode) {

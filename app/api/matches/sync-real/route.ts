@@ -85,13 +85,17 @@ export async function POST(request: NextRequest) {
     let syncedCount = 0;
     let updatedCount = 0;
     let errorCount = 0;
+    let skippedCount = 0;
+
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     for (const match of matches) {
       try {
         const commenceTime = new Date(match.commence_time);
-        const now = new Date();
 
-        if (commenceTime <= now) {
+        if (commenceTime <= now || commenceTime > sevenDaysFromNow) {
+          skippedCount++;
           continue;
         }
 
@@ -169,15 +173,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { error: cleanupError } = await supabase
+    const { error: statusUpdateError } = await supabase
       .from('matches')
       .update({ status: 'live' })
       .eq('match_mode', 'real')
       .eq('status', 'upcoming')
-      .lte('match_date', new Date().toISOString());
+      .lte('match_date', now.toISOString());
 
-    if (cleanupError) {
-      console.error('Cleanup error:', cleanupError);
+    if (statusUpdateError) {
+      console.error('Status update error:', statusUpdateError);
+    }
+
+    const { error: deleteOldError } = await supabase
+      .from('matches')
+      .delete()
+      .eq('match_mode', 'real')
+      .or(`match_date.lt.${now.toISOString()},match_date.gt.${sevenDaysFromNow.toISOString()}`);
+
+    if (deleteOldError) {
+      console.error('Delete old matches error:', deleteOldError);
     }
 
     return createSuccessResponse({
@@ -186,6 +200,7 @@ export async function POST(request: NextRequest) {
         total: matches.length,
         synced: syncedCount,
         updated: updatedCount,
+        skipped: skippedCount,
         errors: errorCount,
       },
     });
