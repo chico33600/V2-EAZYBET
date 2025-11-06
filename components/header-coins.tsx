@@ -79,15 +79,22 @@ export function HeaderCoins({ onCoinsClick }: HeaderCoinsProps) {
   return (
     <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-4 pb-3 header-blur border-b border-[#30363D]/30">
       <div className="max-w-2xl mx-auto flex items-center justify-between">
-        <button
-          onClick={() => router.push('/profil')}
-          aria-label="Aller au profil"
-          className="w-10 h-10 rounded-full bg-gradient-to-br from-[#C1322B] to-[#8B1F1A] flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all active:scale-95"
-        >
-          <span className="text-white font-bold text-lg">
-            {profile?.username?.charAt(0).toUpperCase() || 'U'}
-          </span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push('/profil')}
+            aria-label="Aller au profil"
+            className="w-10 h-10 rounded-full bg-gradient-to-br from-[#C1322B] to-[#8B1F1A] flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all active:scale-95"
+          >
+            <span className="text-white font-bold text-lg">
+              {profile?.username?.charAt(0).toUpperCase() || 'U'}
+            </span>
+          </button>
+
+          <h1 className="text-2xl font-black tracking-tight select-none" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+            <span className="bg-gradient-to-r from-[#C1322B] to-[#E84545] bg-clip-text text-transparent">Eazy</span>
+            <span className="text-white">bet</span>
+          </h1>
+        </div>
 
         <div className="flex items-center gap-2">
           <button
