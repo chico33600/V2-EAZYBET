@@ -226,7 +226,20 @@ export default function ProfilPage() {
                       <p className="text-[#F5C144] text-sm font-semibold mt-1">+{achievement.reward} 💰</p>
                     </div>
                     {achievement.claimed ? (
-                      <span className="text-green-400 text-sm font-semibold">🎉 Réclamée</span>
+                      <div className="flex items-center gap-2">
+                        {achievement.link && (
+                          <a
+                            href={achievement.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#2A84FF] hover:text-[#4A9EFF] transition-colors p-2"
+                            title="Voir le lien"
+                          >
+                            <ExternalLink size={20} />
+                          </a>
+                        )}
+                        <span className="text-green-400 text-sm font-semibold">🎉 Réclamée</span>
+                      </div>
                     ) : (
                       <button
                         onClick={() => handleClaimReward(achievement.id, achievement.link, achievement.reward)}
