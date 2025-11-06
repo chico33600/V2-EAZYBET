@@ -40,8 +40,9 @@ export function MatchCard({ match }: MatchCardProps) {
 
     // 🇪🇸 Liga
     if (normalized.includes("barcelone") || normalized.includes("barcelona")) return "FC Barcelone";
-    if (normalized.includes("madrid") && normalized.includes("real")) return "Real Madrid";
     if (normalized.includes("atletico") && normalized.includes("madrid")) return "Atletico Madrid";
+    if (normalized.includes("atletico") && normalized.includes("bilbao")) return "Atletico Bilbao";
+    if (normalized.includes("madrid") && normalized.includes("real")) return "Real Madrid";
     if (normalized.includes("bilbao")) return "Atletico Bilbao";
     if (normalized.includes("betis")) return "Real Betis";
     if (normalized.includes("sociedad")) return "Real Sociedad";
