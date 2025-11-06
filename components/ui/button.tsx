@@ -18,7 +18,7 @@ const buttonVariants = cva(
           'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         ghost: 'hover:bg-accent hover:text-accent-foreground',
         link: 'text-primary underline-offset-4 hover:underline',
-        eazy: 'bg-gradient-to-r from-eazyGradientStart via-eazyGradientMid to-eazyGradientEnd text-white font-semibold shadow-lg hover:opacity-90 disabled:from-[#5b5b5b] disabled:to-[#2b2b2b] disabled:opacity-100',
+        eazy: 'bg-gradient-to-r from-[#C1322B] via-[#8A2BE2] to-[#007BFF] text-white font-semibold shadow-lg hover:opacity-90 disabled:from-[#5b5b5b] disabled:via-[#4b4b4b] disabled:to-[#2b2b2b] disabled:opacity-100',
       },
       size: {
         default: 'h-10 px-4 py-2',
