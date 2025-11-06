@@ -2,9 +2,7 @@
 
 import { Match } from '@/lib/mock-data';
 import { useBetStore, BetType } from '@/lib/store';
-import { TEAM_IMAGES } from '@/lib/team-images-static';
 import { TEAM_BACKGROUNDS } from '@/lib/team-backgrounds';
-import Image from 'next/image';
 
 interface MatchCardProps {
   match: Match;
@@ -22,27 +20,25 @@ export function MatchCard({ match }: MatchCardProps) {
     return selections.some(s => s.match.id === match.id && s.betType === betType);
   };
 
+  const homeBackground = TEAM_BACKGROUNDS[match.homeTeam];
+  const awayBackground = TEAM_BACKGROUNDS[match.awayTeam];
+
   const backgroundImage =
-    TEAM_BACKGROUNDS[match.homeTeam] ||
-    TEAM_BACKGROUNDS[match.awayTeam] ||
+    homeBackground ||
+    awayBackground ||
     'https://images.pexels.com/photos/399187/pexels-photo-399187.jpeg';
 
-  return (
-    <div className="relative rounded-3xl overflow-hidden card-shadow border border-[#30363D] h-[360px]">
-      <Image
-        src={backgroundImage}
-        alt={`${match.homeTeam} vs ${match.awayTeam}`}
-        fill
-        className="object-cover"
-        unoptimized
-      />
+  const cardStyle = {
+    backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(0,0,0,0.8)), url(${backgroundImage})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  };
 
-      <div
-        className="absolute inset-0"
-        style={{
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.8)), linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 35%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.0) 70%)'
-        }}
-      />
+  return (
+    <div
+      className="relative rounded-3xl overflow-hidden card-shadow border border-[#30363D] h-[360px] transition-transform duration-300 hover:scale-[1.02]"
+      style={cardStyle}
+    >
 
       <div className="absolute top-3 left-3 bg-[#C1322B]/90 backdrop-blur-sm px-3 py-1 rounded-full z-10">
         <p className="text-white text-xs font-semibold">{match.league}</p>
