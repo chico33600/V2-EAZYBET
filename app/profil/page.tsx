@@ -61,10 +61,6 @@ export default function ProfilPage() {
       return;
     }
 
-    setAchievements(prev => prev.map(a =>
-      a.id === achievementId ? { ...a, claimed: true } : a
-    ));
-
     if (link) {
       window.open(link, '_blank');
     }
@@ -75,9 +71,6 @@ export default function ProfilPage() {
 
       if (!token) {
         alert('Session expirée, veuillez vous reconnecter');
-        setAchievements(prev => prev.map(a =>
-          a.id === achievementId ? { ...a, claimed: false } : a
-        ));
         return;
       }
 
@@ -93,23 +86,20 @@ export default function ProfilPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setAchievements(prev => prev.map(a =>
-          a.id === achievementId ? { ...a, claimed: false } : a
-        ));
         if (!data.error?.includes('déjà récupéré')) {
           alert(data.error || 'Erreur lors de la réclamation');
         }
         return;
       }
 
+      setAchievements(prev => prev.map(a =>
+        a.id === achievementId ? { ...a, claimed: true } : a
+      ));
+
       alert(`+${reward} 💰 ajoutés à votre compte !`);
       await refreshProfile();
       window.dispatchEvent(new Event('profile-updated'));
-      await loadAchievements();
     } catch (error: any) {
-      setAchievements(prev => prev.map(a =>
-        a.id === achievementId ? { ...a, claimed: false } : a
-      ));
       alert('Erreur lors de la réclamation de la récompense');
     }
   };
