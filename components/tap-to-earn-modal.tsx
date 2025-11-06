@@ -263,13 +263,14 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
             >
               <motion.button
                 onClick={handleCollect}
-                className="relative px-6 py-3 text-white font-semibold text-sm rounded-full overflow-hidden shadow-lg"
+                className="relative px-6 py-3 text-white font-bold text-sm rounded-full overflow-hidden shadow-lg"
                 style={{
-                  background: 'linear-gradient(135deg, #F5C144, #FF9A00)',
+                  background: 'linear-gradient(135deg, #C1322B, #8A2BE2, #007BFF)',
                 }}
                 whileHover={{
                   scale: 1.05,
-                  boxShadow: '0 0 20px rgba(245, 193, 68, 0.6), 0 10px 30px rgba(0, 0, 0, 0.3)',
+                  background: 'linear-gradient(135deg, #E03E34, #A040F0, #1A8FFF)',
+                  boxShadow: '0 0 25px rgba(138, 43, 226, 0.7), 0 10px 30px rgba(0, 0, 0, 0.4)',
                 }}
                 whileTap={{
                   scale: 0.95,
