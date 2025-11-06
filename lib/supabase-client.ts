@@ -29,7 +29,8 @@ export interface Match {
   id: string;
   team_a: string;
   team_b: string;
-  league: string;
+  league?: string;
+  competition?: string;
   odds_a: number;
   odds_draw: number;
   odds_b: number;

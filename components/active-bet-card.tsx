@@ -14,7 +14,7 @@ interface ActiveBetCardProps {
     matches: {
       team_a: string;
       team_b: string;
-      league: string;
+      competition: string;
       match_date: string;
     };
   };
@@ -41,7 +41,7 @@ export function ActiveBetCard({ bet }: ActiveBetCardProps) {
     <div className="bg-[#1C2128] border border-[#30363D] rounded-2xl p-4 shadow-lg hover:border-[#F5C144]/30 transition-all">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <p className="text-white/50 text-xs mb-1">{bet.matches.league}</p>
+          <p className="text-white/50 text-xs mb-1">{bet.matches.competition}</p>
           <p className="text-white font-bold text-sm">
             {bet.matches.team_a} vs {bet.matches.team_b}
           </p>

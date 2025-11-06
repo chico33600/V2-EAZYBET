@@ -19,7 +19,7 @@ interface FinishedComboBetCardProps {
         id: string;
         team_a: string;
         team_b: string;
-        league: string;
+        competition: string;
         status: string;
         result: string;
       };
@@ -97,7 +97,7 @@ export function FinishedComboBetCard({ bet }: FinishedComboBetCardProps) {
             }`}>
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
-                  <p className="text-white/50 text-xs mb-1">{selection.matches.league}</p>
+                  <p className="text-white/50 text-xs mb-1">{selection.matches.competition}</p>
                   <p className="text-white font-semibold text-sm">
                     {selection.matches.team_a} vs {selection.matches.team_b}
                   </p>

@@ -18,7 +18,7 @@ interface ActiveComboBetCardProps {
         id: string;
         team_a: string;
         team_b: string;
-        league: string;
+        competition: string;
         match_date: string;
         status: string;
       };
@@ -69,7 +69,7 @@ export function ActiveComboBetCard({ bet }: ActiveComboBetCardProps) {
           <div key={index} className="bg-[#0D1117] rounded-xl p-3 border border-purple-500/20">
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1">
-                <p className="text-white/50 text-xs mb-1">{selection.matches.league}</p>
+                <p className="text-white/50 text-xs mb-1">{selection.matches.competition}</p>
                 <p className="text-white font-semibold text-sm">
                   {selection.matches.team_a} vs {selection.matches.team_b}
                 </p>
