@@ -20,10 +20,18 @@ export function MatchCard({ match }: MatchCardProps) {
     return selections.some(s => s.match.id === match.id && s.betType === betType);
   };
 
+  const backgroundImage =
+    match.teamABanner ||
+    match.teamBBanner ||
+    match.teamAStadium ||
+    match.teamBStadium ||
+    match.imageUrl ||
+    'https://images.pexels.com/photos/274506/pexels-photo-274506.jpeg';
+
   return (
     <div className="relative rounded-3xl overflow-hidden card-shadow border border-[#30363D] h-[360px]">
       <Image
-        src={match.imageUrl || 'https://images.pexels.com/photos/274506/pexels-photo-274506.jpeg'}
+        src={backgroundImage}
         alt={`${match.homeTeam} vs ${match.awayTeam}`}
         fill
         className="object-cover"
@@ -50,7 +58,20 @@ export function MatchCard({ match }: MatchCardProps) {
           </div>
           <div className="flex items-center justify-between mb-4">
             <div className="text-center flex-1">
-              <p className="text-white font-bold text-lg">{match.homeTeam}</p>
+              <div className="flex flex-col items-center gap-2 mb-1">
+                {match.teamABadge && (
+                  <div className="relative w-12 h-12 bg-white/10 rounded-full p-1 backdrop-blur-sm">
+                    <Image
+                      src={match.teamABadge}
+                      alt={match.homeTeam}
+                      fill
+                      className="object-contain p-1"
+                      unoptimized
+                    />
+                  </div>
+                )}
+                <p className="text-white font-bold text-lg">{match.homeTeam}</p>
+              </div>
               {isFinished && (
                 <p className="text-[#F5C144] font-bold text-3xl mt-1">{match.homeScore}</p>
               )}
@@ -65,7 +86,20 @@ export function MatchCard({ match }: MatchCardProps) {
             </div>
 
             <div className="text-center flex-1">
-              <p className="text-white font-bold text-lg">{match.awayTeam}</p>
+              <div className="flex flex-col items-center gap-2 mb-1">
+                {match.teamBBadge && (
+                  <div className="relative w-12 h-12 bg-white/10 rounded-full p-1 backdrop-blur-sm">
+                    <Image
+                      src={match.teamBBadge}
+                      alt={match.awayTeam}
+                      fill
+                      className="object-contain p-1"
+                      unoptimized
+                    />
+                  </div>
+                )}
+                <p className="text-white font-bold text-lg">{match.awayTeam}</p>
+              </div>
               {isFinished && (
                 <p className="text-[#F5C144] font-bold text-3xl mt-1">{match.awayScore}</p>
               )}

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createErrorResponse, createSuccessResponse } from '@/lib/auth-utils';
+import { fetchTeamImages } from '@/lib/team-images';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -163,6 +164,11 @@ export async function POST(request: NextRequest) {
                 totalUpdatedCount++;
               }
             } else {
+              const [teamAImages, teamBImages] = await Promise.all([
+                fetchTeamImages(match.home_team),
+                fetchTeamImages(match.away_team),
+              ]);
+
               const { error: insertError } = await supabase
                 .from('matches')
                 .insert({
@@ -177,6 +183,12 @@ export async function POST(request: NextRequest) {
                   match_mode: 'real',
                   external_api_id: match.id,
                   api_provider: 'the-odds-api',
+                  team_a_badge: teamAImages.badge,
+                  team_a_banner: teamAImages.banner,
+                  team_a_stadium: teamAImages.stadium,
+                  team_b_badge: teamBImages.badge,
+                  team_b_banner: teamBImages.banner,
+                  team_b_stadium: teamBImages.stadium,
                 });
 
               if (insertError) {
