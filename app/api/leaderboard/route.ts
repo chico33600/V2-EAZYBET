@@ -10,8 +10,9 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 500);
     const offset = parseInt(searchParams.get('offset') || '0');
     const userId = searchParams.get('userId');
+    const friendsOnly = searchParams.get('friendsOnly') === 'true';
 
-    if (userId) {
+    if (userId && !friendsOnly) {
       const { data: userRank, error: rankError } = await supabase
         .rpc('get_user_rank', { user_id_input: userId });
 
@@ -33,11 +34,26 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const { data: leaderboardData, error } = await supabase
-      .rpc('get_leaderboard', {
-        limit_input: limit,
-        offset_input: offset
-      });
+    let leaderboardData, error;
+
+    if (friendsOnly && userId) {
+      const result = await supabase
+        .rpc('get_friends_leaderboard', {
+          user_id_input: userId,
+          limit_input: limit,
+          offset_input: offset
+        });
+      leaderboardData = result.data;
+      error = result.error;
+    } else {
+      const result = await supabase
+        .rpc('get_leaderboard', {
+          limit_input: limit,
+          offset_input: offset
+        });
+      leaderboardData = result.data;
+      error = result.error;
+    }
 
     console.log('RPC get_leaderboard result:', { data: leaderboardData, error });
 

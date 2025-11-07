@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase-client';
-import { Trophy, TrendingUp, Calendar, LogOut, Settings, ExternalLink, Award } from 'lucide-react';
+import { Trophy, TrendingUp, Calendar, LogOut, Settings, ExternalLink, Award, UserPlus } from 'lucide-react';
+import { FriendsModal } from '@/components/friends-modal';
 
 interface Achievement {
   id: string;
@@ -28,6 +29,7 @@ export default function ProfilPage() {
   const [userRank, setUserRank] = useState<UserRank | null>(null);
   const [loading, setLoading] = useState(true);
   const [rankLoading, setRankLoading] = useState(true);
+  const [friendsModalOpen, setFriendsModalOpen] = useState(false);
   const { profile, signOut, refreshProfile } = useAuth();
   const router = useRouter();
 
@@ -196,6 +198,14 @@ export default function ProfilPage() {
             </div>
           </div>
 
+          <button
+            onClick={() => setFriendsModalOpen(true)}
+            className="w-full mb-6 bg-gradient-to-r from-[#C1322B] via-[#8A2BE2] to-[#007BFF] hover:opacity-90 text-white font-bold py-4 px-6 rounded-2xl transition-opacity flex items-center justify-center gap-3 shadow-lg"
+          >
+            <UserPlus className="w-5 h-5" />
+            + Amis & Parrainage
+          </button>
+
           <h3 className="text-xl font-bold text-white mb-4">Statistiques</h3>
 
           <div className="grid grid-cols-2 gap-3 mb-6">
@@ -283,6 +293,11 @@ export default function ProfilPage() {
               ))}
             </div>
           )}
+
+          <FriendsModal
+            open={friendsModalOpen}
+            onClose={() => setFriendsModalOpen(false)}
+          />
         </div>
   );
 }

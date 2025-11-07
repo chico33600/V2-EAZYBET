@@ -21,7 +21,11 @@ interface UserRank {
   score: number;
 }
 
-export function LeaderboardList() {
+interface LeaderboardListProps {
+  viewMode?: 'global' | 'friends';
+}
+
+export function LeaderboardList({ viewMode = 'global' }: LeaderboardListProps) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState<UserRank | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,7 +48,8 @@ export function LeaderboardList() {
 
     try {
       const currentOffset = isLoadMore ? offset : 0;
-      const response = await fetch(`/api/leaderboard?limit=${LIMIT}&offset=${currentOffset}`);
+      const friendsParam = viewMode === 'friends' && profile?.id ? `&friendsOnly=true&userId=${profile.id}` : '';
+      const response = await fetch(`/api/leaderboard?limit=${LIMIT}&offset=${currentOffset}${friendsParam}`);
       const data = await response.json();
 
       console.log('[Leaderboard] Raw API response:', JSON.stringify(data, null, 2));
@@ -108,7 +113,7 @@ export function LeaderboardList() {
   useEffect(() => {
     console.log('LeaderboardList mounted, profile:', profile);
     loadLeaderboard();
-  }, []);
+  }, [viewMode]);
 
   useEffect(() => {
     if (profile?.id) {

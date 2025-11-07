@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 
@@ -16,8 +16,18 @@ export default function AuthPage() {
   const [resetEmail, setResetEmail] = useState('');
   const [resetSuccess, setResetSuccess] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [referrerId, setReferrerId] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { signIn, signUp } = useAuth();
+
+  useEffect(() => {
+    const ref = searchParams.get('ref');
+    if (ref) {
+      setReferrerId(ref);
+      setMode('signup');
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +45,21 @@ export default function AuthPage() {
           return;
         }
         result = await signUp(email, password, username);
+
+        if (!result.error && result.data?.user?.id && referrerId) {
+          try {
+            await fetch('/api/referrals', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                referrerId,
+                referredId: result.data.user.id
+              })
+            });
+          } catch (refError) {
+            console.error('Failed to create referral:', refError);
+          }
+        }
       }
 
       if (result.error) {
@@ -84,6 +109,13 @@ export default function AuthPage() {
         </div>
 
         <div className="bg-[#1C2128]/80 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-[#30363D]">
+          {referrerId && (
+            <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30">
+              <p className="text-green-400 text-sm font-semibold text-center">
+                🎉 Vous avez été parrainé! Vous et votre parrain recevrez 10 💎 chacun
+              </p>
+            </div>
+          )}
           <div className="flex gap-2 mb-8">
             <button
               onClick={() => setMode('login')}
