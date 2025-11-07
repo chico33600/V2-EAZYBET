@@ -109,12 +109,16 @@ export default function AdminPage() {
       });
 
       const result = await response.json();
+      console.log('[Admin] API Response:', result);
 
       if (response.ok) {
         // L'API enveloppe la réponse dans { success: true, data: {...} }
         const responseData = result.data || result;
+        console.log('[Admin] Response data:', responseData);
+
         const stats = responseData.stats || { synced: 0, updated: 0, errors: 0 };
         const message = responseData.message || 'Synchronisation réussie !';
+        console.log('[Admin] Stats:', stats, 'Message:', message);
 
         alert(`${message}\n\n${stats.synced} nouveaux matchs\n${stats.updated} matchs mis à jour\n${stats.errors} erreurs`);
         await loadMatches();
@@ -150,6 +154,7 @@ export default function AdminPage() {
             <h1 className="text-2xl font-bold text-white">Panel Admin</h1>
             <p className="text-sm text-white/50">Résoudre les matchs</p>
             <p className="text-xs text-yellow-400 mt-1">Debug: Role={profile?.role || 'undefined'}, isAdmin={isAdmin.toString()}</p>
+            <p className="text-xs text-green-400 mt-1">✅ Version: 2025-11-07-15h47 (Fix sync bug)</p>
           </div>
         </div>
         {isAdmin ? (
