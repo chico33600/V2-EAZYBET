@@ -41,7 +41,7 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
 
   const tapAreaRef = useRef<HTMLDivElement>(null);
   const activeTouchesRef = useRef<Map<number, ActiveTouch>>(new Map());
-  const lastTapTimeRef = useRef<number>(0);
+  const tapIdCounter = useRef<number>(0);
   const supportsHaptics = useRef<boolean>(false);
 
   useEffect(() => {
@@ -58,9 +58,9 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
     }
   }, []);
 
-  const createFloatingText = useCallback((x: number, y: number) => {
+  const createFloatingText = useCallback((x: number, y: number, tapId: number) => {
     const newFloatingText: FloatingText = {
-      id: Date.now() + Math.random(),
+      id: tapId,
       x,
       y,
     };
@@ -68,7 +68,7 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
     setFloatingTexts((prev) => [...prev, newFloatingText]);
 
     setTimeout(() => {
-      setFloatingTexts((prev) => prev.filter((text) => text.id !== newFloatingText.id));
+      setFloatingTexts((prev) => prev.filter((text) => text.id !== tapId));
     }, 800);
   }, []);
 
@@ -82,15 +82,13 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
   }, []);
 
   const processTap = useCallback((x: number, y: number) => {
-    const now = Date.now();
-    if (now - lastTapTimeRef.current < 50) return;
-    lastTapTimeRef.current = now;
+    const tapId = ++tapIdCounter.current;
 
     setTapCount((prev) => prev + 1);
     setActiveTaps((prev) => Math.min(prev + 1, 3));
     setRotationKey((prev) => prev + 1);
 
-    createFloatingText(x, y);
+    createFloatingText(x, y, tapId);
 
     if (tapAreaRef.current) {
       createRipple(x, y, tapAreaRef.current);
@@ -119,23 +117,27 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
     if (isCollecting) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
-    const touches = Array.from(e.touches);
+    const changedTouches = Array.from(e.changedTouches);
 
-    for (const touch of touches) {
+    for (const touch of changedTouches) {
       const touchId = touch.identifier;
 
-      if (activeTouchesRef.current.size >= 3) break;
+      if (activeTouchesRef.current.size >= 3) {
+        break;
+      }
 
       if (!activeTouchesRef.current.has(touchId)) {
-        const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
-
         activeTouchesRef.current.set(touchId, {
           id: touchId,
           startTime: Date.now(),
         });
 
-        processTap(x, y);
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+
+        requestAnimationFrame(() => {
+          processTap(x, y);
+        });
       }
     }
   }, [processTap, isCollecting]);
@@ -149,9 +151,11 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
 
     const changedTouches = Array.from(e.changedTouches);
 
-    for (const touch of changedTouches) {
-      activeTouchesRef.current.delete(touch.identifier);
-    }
+    requestAnimationFrame(() => {
+      for (const touch of changedTouches) {
+        activeTouchesRef.current.delete(touch.identifier);
+      }
+    });
   }, []);
 
   const handleTouchCancel = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
@@ -159,9 +163,11 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
 
     const changedTouches = Array.from(e.changedTouches);
 
-    for (const touch of changedTouches) {
-      activeTouchesRef.current.delete(touch.identifier);
-    }
+    requestAnimationFrame(() => {
+      for (const touch of changedTouches) {
+        activeTouchesRef.current.delete(touch.identifier);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -365,31 +371,53 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
               ease: 'easeInOut',
             }}
           >
-            Tapez avec jusqu'à 3 doigts pour gagner plus vite
+            {activeTaps === 0 && 'Tapez avec jusqu\'à 3 doigts pour gagner plus vite'}
+            {activeTaps === 1 && 'Excellent ! Essayez avec 2 ou 3 doigts 🔥'}
+            {activeTaps === 2 && 'Incroyable ! Ajoutez un 3ème doigt ! 🚀'}
+            {activeTaps === 3 && 'MAXIMUM ATTEINT ! 3 DOIGTS 💥'}
           </motion.p>
 
           <AnimatePresence>
             {activeTaps > 0 && (
               <motion.div
-                className="text-center mt-2"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
+                className="text-center mt-3"
+                initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: -10 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               >
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30">
+                <div
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 ${
+                    activeTaps === 3
+                      ? 'bg-gradient-to-r from-yellow-500/30 to-orange-500/30 border-yellow-500/50 shadow-lg shadow-yellow-500/30'
+                      : 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 border-purple-500/30'
+                  }`}
+                >
                   <div className="flex gap-1">
-                    {[...Array(activeTaps)].map((_, i) => (
+                    {[...Array(3)].map((_, i) => (
                       <motion.div
                         key={i}
-                        className="w-2 h-2 rounded-full bg-purple-400"
+                        className={`w-2 h-2 rounded-full ${
+                          i < activeTaps
+                            ? activeTaps === 3 ? 'bg-yellow-400' : 'bg-purple-400'
+                            : 'bg-slate-600'
+                        }`}
                         initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
+                        animate={{
+                          scale: i < activeTaps ? [1, 1.3, 1] : 0.8,
+                        }}
+                        transition={{
+                          duration: 0.2,
+                          repeat: i < activeTaps ? Infinity : 0,
+                          repeatDelay: 0.5
+                        }}
                       />
                     ))}
                   </div>
-                  <p className="text-purple-300 font-bold text-xs">
-                    {activeTaps} doigt{activeTaps > 1 ? 's' : ''} actif{activeTaps > 1 ? 's' : ''}
+                  <p className={`font-bold text-xs ${
+                    activeTaps === 3 ? 'text-yellow-300' : 'text-purple-300'
+                  }`}>
+                    {activeTaps}/3 doigt{activeTaps > 1 ? 's' : ''}
                   </p>
                 </div>
               </motion.div>
