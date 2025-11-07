@@ -108,13 +108,18 @@ export default function AdminPage() {
         },
       });
 
-      const data = await response.json();
+      const result = await response.json();
 
       if (response.ok) {
-        alert(`Synchronisation réussie !\n${data.stats.synced} nouveaux matchs\n${data.stats.updated} matchs mis à jour\n${data.stats.errors} erreurs`);
+        // L'API enveloppe la réponse dans { success: true, data: {...} }
+        const responseData = result.data || result;
+        const stats = responseData.stats || { synced: 0, updated: 0, errors: 0 };
+        const message = responseData.message || 'Synchronisation réussie !';
+
+        alert(`${message}\n\n${stats.synced} nouveaux matchs\n${stats.updated} matchs mis à jour\n${stats.errors} erreurs`);
         await loadMatches();
       } else {
-        alert(`Erreur : ${data.error}`);
+        alert(`Erreur : ${result.error || 'Erreur inconnue'}`);
       }
     } catch (error: any) {
       alert(`Erreur : ${error.message}`);
