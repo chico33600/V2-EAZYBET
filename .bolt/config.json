@@ -1,3 +1,7 @@
 {
-  "template": "nextjs-shadcn"
+  "deploy": {
+    "command": "npm run build",
+    "outputDirectory": ".next",
+    "installCommand": "npm install"
+  }
 }
