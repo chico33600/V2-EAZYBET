@@ -39,17 +39,18 @@ export default function Home() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (profile && !profile.has_seen_tutorial) {
+    if (profile && !profile.has_seen_tutorial && !showTutorial) {
       setShowTutorial(true);
     }
-  }, [profile, setShowTutorial]);
+  }, [profile]);
 
   const handleTutorialComplete = async () => {
+    setShowTutorial(false);
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         console.error('No session token available');
-        setShowTutorial(false);
         return;
       }
 
@@ -61,16 +62,11 @@ export default function Home() {
         },
       });
 
-      if (response.ok) {
-        setShowTutorial(false);
-        window.location.reload();
-      } else {
+      if (!response.ok) {
         console.error('Failed to complete tutorial');
-        setShowTutorial(false);
       }
     } catch (error) {
       console.error('Tutorial completion error:', error);
-      setShowTutorial(false);
     }
   };
 
