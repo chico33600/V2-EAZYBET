@@ -39,6 +39,8 @@ export async function GET(request: NextRequest) {
         offset_input: offset
       });
 
+    console.log('RPC get_leaderboard result:', { data: leaderboardData, error });
+
     if (error) {
       console.error('Leaderboard fetch error:', error);
       return createErrorResponse('Failed to fetch leaderboard', 500);
@@ -52,10 +54,11 @@ export async function GET(request: NextRequest) {
       score: Number(player.leaderboard_score),
     }));
 
+    console.log('Processed leaderboard:', leaderboard);
+
     const { count, error: countError } = await supabase
       .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .gt('leaderboard_score', 0);
+      .select('*', { count: 'exact', head: true });
 
     return createSuccessResponse({
       leaderboard,

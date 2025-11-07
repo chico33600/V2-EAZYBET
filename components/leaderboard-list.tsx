@@ -47,9 +47,13 @@ export function LeaderboardList() {
       const response = await fetch(`/api/leaderboard?limit=${LIMIT}&offset=${currentOffset}`);
       const data = await response.json();
 
-      if (data.success) {
-        const newEntries = data.data.leaderboard;
-        setTotal(data.data.total);
+      console.log('Leaderboard API response:', data);
+
+      if (data.success && data.data) {
+        const newEntries = data.data.leaderboard || [];
+        setTotal(data.data.total || 0);
+
+        console.log('New entries:', newEntries, 'Total:', data.data.total);
 
         if (isLoadMore) {
           setEntries((prev) => [...prev, ...newEntries]);
@@ -60,6 +64,8 @@ export function LeaderboardList() {
         }
 
         setHasMore(newEntries.length === LIMIT && currentOffset + newEntries.length < data.data.total);
+      } else {
+        console.error('Invalid API response:', data);
       }
     } catch (error) {
       console.error('Error loading leaderboard:', error);
@@ -85,9 +91,10 @@ export function LeaderboardList() {
   }
 
   useEffect(() => {
+    console.log('LeaderboardList mounted, profile:', profile);
     loadLeaderboard();
     loadUserRank();
-  }, []);
+  }, [profile]);
 
   useEffect(() => {
     if (observerRef.current) {
