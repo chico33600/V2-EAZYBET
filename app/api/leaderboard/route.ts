@@ -6,13 +6,20 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('[Leaderboard API] Starting request...');
+    console.log('[Leaderboard API] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log('[Leaderboard API] Supabase Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 500);
     const offset = parseInt(searchParams.get('offset') || '0');
     const userId = searchParams.get('userId');
     const friendsOnly = searchParams.get('friendsOnly') === 'true';
 
+    console.log('[Leaderboard API] Params:', { limit, offset, userId, friendsOnly });
+
     if (userId && !friendsOnly) {
+      console.log('[Leaderboard API] Fetching user rank for:', userId);
       const { data: userRank, error: rankError } = await supabase
         .rpc('get_user_rank', { user_id_input: userId });
 
@@ -36,7 +43,10 @@ export async function GET(request: NextRequest) {
 
     let leaderboardData, error;
 
+    console.log('[Leaderboard API] Fetching leaderboard data...');
+
     if (friendsOnly && userId) {
+      console.log('[Leaderboard API] Using friends leaderboard');
       const result = await supabase
         .rpc('get_friends_leaderboard', {
           user_id_input: userId,
@@ -46,6 +56,7 @@ export async function GET(request: NextRequest) {
       leaderboardData = result.data;
       error = result.error;
     } else {
+      console.log('[Leaderboard API] Using global leaderboard');
       const result = await supabase
         .rpc('get_leaderboard', {
           limit_input: limit,
@@ -55,11 +66,14 @@ export async function GET(request: NextRequest) {
       error = result.error;
     }
 
-    console.log('RPC get_leaderboard result:', { data: leaderboardData, error });
+    console.log('[Leaderboard API] RPC result:', {
+      dataLength: leaderboardData?.length,
+      error: error ? JSON.stringify(error) : null
+    });
 
     if (error) {
-      console.error('Leaderboard fetch error:', error);
-      return createErrorResponse('Failed to fetch leaderboard', 500);
+      console.error('[Leaderboard API] Leaderboard fetch error:', error);
+      return createErrorResponse(`Failed to fetch leaderboard: ${error.message || JSON.stringify(error)}`, 500);
     }
 
     const leaderboard = (leaderboardData || []).map((player: any) => ({
@@ -70,21 +84,31 @@ export async function GET(request: NextRequest) {
       score: Number(player.leaderboard_score),
     }));
 
-    console.log('Processed leaderboard:', leaderboard);
+    console.log('[Leaderboard API] Processed leaderboard entries:', leaderboard.length);
 
     const { count, error: countError } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true });
 
-    return createSuccessResponse({
+    console.log('[Leaderboard API] Total count:', count, 'Error:', countError);
+
+    const response = {
       leaderboard,
       total: count || leaderboard.length,
       offset,
       limit,
+    };
+
+    console.log('[Leaderboard API] Sending response:', {
+      leaderboardLength: response.leaderboard.length,
+      total: response.total
     });
 
+    return createSuccessResponse(response);
+
   } catch (error: any) {
-    console.error('Leaderboard error:', error);
-    return createErrorResponse('Internal server error', 500);
+    console.error('[Leaderboard API] Caught error:', error);
+    console.error('[Leaderboard API] Error stack:', error.stack);
+    return createErrorResponse(`Internal server error: ${error.message}`, 500);
   }
 }
