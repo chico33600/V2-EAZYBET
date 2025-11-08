@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     if (response) return response;
 
     const body = await request.json();
-    const { match_id, amount, choice } = body;
+    const { match_id, amount, choice, currency = 'tokens' } = body;
 
     // Validation
     if (!match_id || !amount || !choice) {
@@ -24,8 +24,12 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Invalid choice. Must be A, Draw, or B', 400);
     }
 
+    if (!['tokens', 'diamonds'].includes(currency)) {
+      return createErrorResponse('Invalid currency. Must be tokens or diamonds', 400);
+    }
+
     if (amount < 10) {
-      return createErrorResponse('Minimum bet amount is 10 tokens', 400);
+      return createErrorResponse('Minimum bet amount is 10', 400);
     }
 
     // Get match details
@@ -46,7 +50,7 @@ export async function POST(request: NextRequest) {
     // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('tokens')
+      .select('tokens, diamonds, total_bets')
       .eq('id', user!.id)
       .maybeSingle();
 
@@ -54,22 +58,39 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Profile not found', 404);
     }
 
-    if (profile.tokens < amount) {
+    // Check balance based on currency
+    if (currency === 'tokens' && profile.tokens < amount) {
       return createErrorResponse('Insufficient tokens', 400);
+    }
+
+    if (currency === 'diamonds' && profile.diamonds < amount) {
+      return createErrorResponse('Insufficient diamonds', 400);
     }
 
     // Get appropriate odds
     const odds = choice === 'A' ? match.odds_a : choice === 'Draw' ? match.odds_draw : match.odds_b;
-    const potentialDiamonds = calculateDiamonds(amount, odds);
+    const totalWin = Math.round(amount * odds);
+    const profit = totalWin - amount;
+    const potentialDiamonds = currency === 'tokens' ? Math.round(profit * 0.01) : 0;
 
-    // Deduct tokens
+    // Deduct from balance based on currency
+    const updateData: any = {
+      total_bets: profile.total_bets + 1
+    };
+
+    if (currency === 'tokens') {
+      updateData.tokens = profile.tokens - amount;
+    } else {
+      updateData.diamonds = profile.diamonds - amount;
+    }
+
     const { error: deductError } = await supabase
       .from('profiles')
-      .update({ tokens: profile.tokens - amount })
+      .update(updateData)
       .eq('id', user!.id);
 
     if (deductError) {
-      console.error('Token deduction error:', deductError);
+      console.error('Balance deduction error:', deductError);
       return createErrorResponse('Failed to place bet', 500);
     }
 
@@ -82,33 +103,29 @@ export async function POST(request: NextRequest) {
         amount,
         choice,
         odds,
+        potential_win: totalWin,
         potential_diamonds: potentialDiamonds,
+        bet_currency: currency,
       })
       .select()
       .single();
 
     if (betError) {
       console.error('Bet creation error:', betError);
-      // Try to refund tokens
+      // Try to refund balance
+      const rollbackData: any = {
+        total_bets: profile.total_bets
+      };
+      if (currency === 'tokens') {
+        rollbackData.tokens = profile.tokens;
+      } else {
+        rollbackData.diamonds = profile.diamonds;
+      }
       await supabase
         .from('profiles')
-        .update({ tokens: profile.tokens })
+        .update(rollbackData)
         .eq('id', user!.id);
       return createErrorResponse('Failed to place bet', 500);
-    }
-
-    // Update total_bets count
-    const { data: currentProfile } = await supabase
-      .from('profiles')
-      .select('total_bets')
-      .eq('id', user!.id)
-      .maybeSingle();
-
-    if (currentProfile) {
-      await supabase
-        .from('profiles')
-        .update({ total_bets: currentProfile.total_bets + 1 })
-        .eq('id', user!.id);
     }
 
     return createSuccessResponse({
@@ -119,10 +136,13 @@ export async function POST(request: NextRequest) {
         amount: bet.amount,
         choice: bet.choice,
         odds: bet.odds,
+        potential_win: bet.potential_win,
         potential_diamonds: bet.potential_diamonds,
+        bet_currency: bet.bet_currency,
         created_at: bet.created_at,
       },
-      new_token_balance: profile.tokens - amount,
+      new_balance: currency === 'tokens' ? profile.tokens - amount : profile.diamonds - amount,
+      currency,
     }, 201);
 
   } catch (error: any) {
