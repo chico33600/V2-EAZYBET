@@ -79,6 +79,8 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real'): Promise<M
 }
 
 export async function placeBet(matchId: string, amount: number, choice: 'A' | 'Draw' | 'B', currency: 'tokens' | 'diamonds' = 'tokens') {
+  console.log('[placeBet] Starting with:', { matchId, amount, choice, currency });
+
   const minAmount = currency === 'tokens' ? 10 : 1;
   if (amount < minAmount) {
     throw new Error(`Mise minimum : ${minAmount}`);
@@ -108,6 +110,8 @@ export async function placeBet(matchId: string, amount: number, choice: 'A' | 'D
     .select('tokens, diamonds, total_bets')
     .eq('id', user.id)
     .maybeSingle();
+
+  console.log('[placeBet] Profile:', profile);
 
   if (!profile) {
     throw new Error('Profil non trouvé');
@@ -141,6 +145,17 @@ export async function placeBet(matchId: string, amount: number, choice: 'A' | 'D
     .update(updateData)
     .eq('id', user.id);
 
+  console.log('[placeBet] Inserting bet with data:', {
+    user_id: user.id,
+    match_id: matchId,
+    amount,
+    choice,
+    odds,
+    potential_win: totalWin,
+    potential_diamonds: diamondsFromProfit,
+    bet_currency: currency,
+  });
+
   const { data: bet, error } = await supabase
     .from('bets')
     .insert({
@@ -157,6 +172,7 @@ export async function placeBet(matchId: string, amount: number, choice: 'A' | 'D
     .single();
 
   if (error) {
+    console.error('[placeBet] Insert error:', error);
     const rollbackData: any = {
       total_bets: profile.total_bets
     };
@@ -169,8 +185,10 @@ export async function placeBet(matchId: string, amount: number, choice: 'A' | 'D
       .from('profiles')
       .update(rollbackData)
       .eq('id', user.id);
-    throw new Error('Erreur lors du pari');
+    throw new Error(`Erreur lors du pari: ${error.message}`);
   }
+
+  console.log('[placeBet] Bet placed successfully:', bet);
 
   return bet;
 }

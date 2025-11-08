@@ -47,6 +47,8 @@ export function BetSlip() {
   const handlePlaceBet = async () => {
     if (!betAmount || betAmount <= 0 || betAmount > availableBalance) return;
 
+    console.log('[BetSlip] Placing bet:', { betAmount, currency, availableBalance });
+
     setIsPlacing(true);
     setError('');
 
@@ -58,12 +60,15 @@ export function BetSlip() {
           odds: sel.odds
         }));
 
+        console.log('[BetSlip] Placing combo bet:', { comboSelections, betAmount, currency });
         await placeCombobet(comboSelections, betAmount, currency);
       } else {
         const choice = selection.betType === 'home' ? 'A' : selection.betType === 'draw' ? 'Draw' : 'B';
+        console.log('[BetSlip] Placing single bet:', { matchId: selection.match.id, betAmount, choice, currency });
         await placeBet(selection.match.id, betAmount, choice, currency);
       }
 
+      console.log('[BetSlip] Bet placed successfully, refreshing profile');
       await refreshProfile();
 
       if (typeof window !== 'undefined') {
@@ -75,6 +80,7 @@ export function BetSlip() {
       setAmount('');
       setCurrency('tokens');
     } catch (err: any) {
+      console.error('[BetSlip] Error placing bet:', err);
       setError(err.message || 'Erreur lors du placement du pari');
     } finally {
       setIsPlacing(false);
