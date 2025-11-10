@@ -15,6 +15,7 @@ import { ActiveComboBetCard } from '@/components/active-combo-bet-card';
 import { FinishedComboBetCard } from '@/components/finished-combo-bet-card';
 import { TutorialModal } from '@/components/tutorial-modal';
 import { supabase } from '@/lib/supabase-client';
+import { startAutoSync, stopAutoSync, syncMatches } from '@/lib/match-sync';
 
 export default function Home() {
   const { activeHomeTab: activeTab, setActiveHomeTab: setActiveTab } = useNavigationStore();
@@ -43,6 +44,16 @@ export default function Home() {
       setShowTutorial(true);
     }
   }, [profile, setShowTutorial]);
+
+  useEffect(() => {
+    if (user) {
+      startAutoSync(60 * 60 * 1000);
+    }
+
+    return () => {
+      stopAutoSync();
+    };
+  }, [user]);
 
   const handleTutorialComplete = async () => {
     setShowTutorial(false);
@@ -118,8 +129,20 @@ export default function Home() {
       }
     };
 
+    const handleMatchesUpdated = async () => {
+      if (activeTab === 'upcoming') {
+        const data = await fetchAvailableMatches('real');
+        setMatches(data);
+      }
+    };
+
     window.addEventListener('bet-placed', handleBetPlaced);
-    return () => window.removeEventListener('bet-placed', handleBetPlaced);
+    window.addEventListener('matches-synced', handleMatchesUpdated);
+
+    return () => {
+      window.removeEventListener('bet-placed', handleBetPlaced);
+      window.removeEventListener('matches-synced', handleMatchesUpdated);
+    };
   }, [activeTab, setHasNewBet]);
 
   if (!mounted || authLoading) {
