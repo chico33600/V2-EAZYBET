@@ -20,21 +20,37 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Amount must be between 1 and 100', 400);
     }
 
-    const { data, error } = await supabaseServer
-      .rpc('increment_tokens', { amount_to_add: amount });
+    // Get current profile
+    const { data: profile, error: profileError } = await supabaseServer
+      .from('profiles')
+      .select('tokens, diamonds')
+      .eq('id', user!.id)
+      .maybeSingle();
 
-    if (error) {
-      console.error('[ADD-TOKENS] Error:', error);
-      return createErrorResponse(error.message || 'Failed to add tokens', 500);
+    if (profileError || !profile) {
+      console.error('[ADD-TOKENS] Profile error:', profileError);
+      return createErrorResponse('Profile not found', 404);
     }
 
-    console.log(`[ADD-TOKENS] User ${user!.id} earned ${amount} tokens. New balance: ${data.tokens}`);
+    // Update tokens
+    const newTokens = profile.tokens + amount;
+    const { error: updateError } = await supabaseServer
+      .from('profiles')
+      .update({ tokens: newTokens })
+      .eq('id', user!.id);
+
+    if (updateError) {
+      console.error('[ADD-TOKENS] Update error:', updateError);
+      return createErrorResponse('Failed to add tokens', 500);
+    }
+
+    console.log(`[ADD-TOKENS] User ${user!.id} earned ${amount} tokens. New balance: ${newTokens}`);
 
     return createSuccessResponse({
       message: `Successfully added ${amount} tokens`,
-      tokens: data.tokens,
-      diamonds: data.diamonds,
-      added: data.added,
+      tokens: newTokens,
+      diamonds: profile.diamonds,
+      added: amount,
     });
 
   } catch (error: any) {
