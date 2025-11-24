@@ -61,12 +61,19 @@ export async function syncMatches(): Promise<SyncResponse> {
   try {
     console.log('🌀 Synchronisation Odds API...');
 
-    const { data: functionData, error: functionError } = await supabase.functions.invoke('sync-matches', {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    const response = await fetch('/api/matches/sync-odds-api', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': session?.access_token ? `Bearer ${session.access_token}` : '',
+      },
+      body: JSON.stringify({ force: false }),
     });
 
-    if (functionError) {
-      console.error('⚠️ Erreur lors de la synchronisation:', functionError);
+    if (!response.ok) {
+      console.error('⚠️ Erreur lors de la synchronisation:', response.statusText);
 
       const demoAdded = await addDemoMatchesIfNeeded();
 
@@ -76,7 +83,7 @@ export async function syncMatches(): Promise<SyncResponse> {
 
       return {
         success: demoAdded,
-        error: functionError.message,
+        error: response.statusText,
         stats: {
           competitions: 0,
           synced: demoAdded ? 5 : 0,
@@ -87,25 +94,52 @@ export async function syncMatches(): Promise<SyncResponse> {
       };
     }
 
-    const response = functionData as SyncResponse;
+    const data = await response.json();
 
-    if (response.success) {
+    if (data.total !== undefined) {
       lastSyncTime = new Date();
-      console.log('✅ Matchs mis à jour', response.stats);
+      console.log(`✅ Matchs synchronisés: ${data.inserted} nouveaux, ${data.updated} mis à jour`);
 
-      if (response.stats && (response.stats.synced === 0 && response.stats.updated === 0)) {
+      if (data.inserted === 0 && data.updated === 0) {
         console.log('⚠️ Aucun match trouvé');
         await addDemoMatchesIfNeeded();
       }
 
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('matches-synced', { detail: response.stats }));
+        window.dispatchEvent(new CustomEvent('matches-synced', {
+          detail: {
+            synced: data.inserted,
+            updated: data.updated,
+            total: data.total,
+          }
+        }));
       }
-    } else {
-      console.error('⚠️ Échec de la synchronisation:', response.error);
-    }
 
-    return response;
+      return {
+        success: true,
+        message: data.message,
+        stats: {
+          competitions: 8,
+          synced: data.inserted,
+          updated: data.updated,
+          skipped: 0,
+          errors: 0,
+        },
+      };
+    } else {
+      console.error('⚠️ Format de réponse invalide');
+      return {
+        success: false,
+        error: 'Invalid response format',
+        stats: {
+          competitions: 0,
+          synced: 0,
+          updated: 0,
+          skipped: 0,
+          errors: 1,
+        },
+      };
+    }
   } catch (error) {
     console.error('⚠️ Erreur lors de la synchronisation:', error);
 

@@ -5,10 +5,10 @@ export async function fetchMatches(status?: string): Promise<Match[]> {
   let query = supabase
     .from('matches')
     .select('*')
-    .order('match_date', { ascending: true });
+    .order('start_time', { ascending: true });
 
   if (status) {
-    query = query.eq('status', status);
+    query = query.eq('status', status.toUpperCase());
   }
 
   const { data, error } = await query;
@@ -18,7 +18,18 @@ export async function fetchMatches(status?: string): Promise<Match[]> {
     return [];
   }
 
-  return data || [];
+  return (data || []).map(match => ({
+    ...match,
+    match_date: match.start_time,
+    team_a: match.team_home,
+    team_b: match.team_away,
+    odds_a: match.odd_home,
+    odds_draw: match.odd_draw,
+    odds_b: match.odd_away,
+    league: match.competition,
+    team_a_badge: match.team_home_image,
+    team_b_badge: match.team_away_image,
+  })) as any;
 }
 
 export async function fetchAvailableMatches(mode?: 'fictif' | 'real'): Promise<Match[]> {
@@ -31,14 +42,10 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real'): Promise<M
   let query = supabase
     .from('matches')
     .select('*')
-    .eq('status', 'upcoming')
-    .gt('match_date', now.toISOString())
-    .lte('match_date', sevenDaysFromNow.toISOString())
-    .order('match_date', { ascending: true });
-
-  if (mode) {
-    query = query.eq('match_mode', mode);
-  }
+    .in('status', ['UPCOMING', 'LIVE'])
+    .gte('start_time', now.toISOString())
+    .lte('start_time', sevenDaysFromNow.toISOString())
+    .order('start_time', { ascending: true });
 
   const { data: matches, error } = await query;
 
@@ -51,13 +58,7 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real'): Promise<M
     .from('bets')
     .select('match_id')
     .eq('user_id', user.id)
-    .is('is_win', null);
-
-  const { data: comboBets } = await supabase
-    .from('combo_bets')
-    .select('combo_bet_selections(match_id)')
-    .eq('user_id', user.id)
-    .is('is_win', null);
+    .eq('result', 'PENDING');
 
   const bettedMatchIds = new Set<string>();
 
@@ -65,17 +66,20 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real'): Promise<M
     userBets.forEach(bet => bettedMatchIds.add(bet.match_id));
   }
 
-  if (comboBets) {
-    comboBets.forEach(combo => {
-      if (combo.combo_bet_selections) {
-        combo.combo_bet_selections.forEach((sel: any) => {
-          bettedMatchIds.add(sel.match_id);
-        });
-      }
-    });
-  }
+  const availableMatches = (matches || []).filter(match => !bettedMatchIds.has(match.id));
 
-  return (matches || []).filter(match => !bettedMatchIds.has(match.id));
+  return availableMatches.map(match => ({
+    ...match,
+    match_date: match.start_time,
+    team_a: match.team_home,
+    team_b: match.team_away,
+    odds_a: match.odd_home,
+    odds_draw: match.odd_draw,
+    odds_b: match.odd_away,
+    league: match.competition,
+    team_a_badge: match.team_home_image,
+    team_b_badge: match.team_away_image,
+  })) as any;
 }
 
 export async function placeBet(matchId: string, amount: number, choice: 'A' | 'Draw' | 'B', currency: 'tokens' | 'diamonds' = 'tokens') {
