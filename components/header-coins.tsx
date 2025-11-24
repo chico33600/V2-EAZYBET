@@ -24,35 +24,11 @@ export function HeaderCoins({ onCoinsClick }: HeaderCoinsProps) {
   const coins = mounted && profile ? profile.tokens : 0;
   const diamonds = mounted && profile ? profile.diamonds : 0;
 
+  // Mise à jour IMMÉDIATE du displayCoins quand profile.tokens change
   useEffect(() => {
     if (mounted && profile) {
-      console.log('[HeaderCoins] Profile changed, tokens:', profile.tokens, 'current display:', displayCoins);
-      if (displayCoins === 0 && profile.tokens > 0) {
-        console.log('[HeaderCoins] Initial setup, setting displayCoins to:', profile.tokens);
-        setDisplayCoins(profile.tokens);
-      } else if (profile.tokens !== displayCoins) {
-        console.log('[HeaderCoins] Profile tokens changed from', displayCoins, 'to', profile.tokens);
-        if (profile.tokens > displayCoins) {
-          const diff = profile.tokens - displayCoins;
-          const steps = Math.min(diff, 20);
-          const increment = diff / steps;
-          let current = displayCoins;
-
-          const interval = setInterval(() => {
-            current += increment;
-            if (current >= profile.tokens) {
-              setDisplayCoins(profile.tokens);
-              clearInterval(interval);
-            } else {
-              setDisplayCoins(Math.round(current));
-            }
-          }, 30);
-
-          return () => clearInterval(interval);
-        } else {
-          setDisplayCoins(profile.tokens);
-        }
-      }
+      console.log('[HeaderCoins] 🔄 Profile tokens:', profile.tokens);
+      setDisplayCoins(profile.tokens);
     }
   }, [mounted, profile?.tokens]);
 

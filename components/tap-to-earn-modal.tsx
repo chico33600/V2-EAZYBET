@@ -83,22 +83,22 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
     const tokensToEarn = tapCount * 1;
 
     try {
-      console.log(`[Tap-to-Earn] Starting collection: ${tapCount} taps = ${tokensToEarn} tokens`);
-      console.log('[Tap-to-Earn] Current profile tokens:', profile?.tokens);
+      console.log(`[Tap-to-Earn] 🎯 Starting: ${tapCount} taps = ${tokensToEarn} tokens`);
+      console.log('[Tap-to-Earn] 💰 Current balance:', profile?.tokens);
 
       const result = await earnTokens(tapCount);
-      console.log('[Tap-to-Earn] API result:', JSON.stringify(result));
-      console.log('[Tap-to-Earn] New balance from API:', result.new_balance);
+      console.log('[Tap-to-Earn] ✅ New balance:', result.new_balance);
 
-      console.log('[Tap-to-Earn] Calling updateProfile with tokens:', result.new_balance, 'diamonds:', result.diamonds);
+      // Mise à jour IMMÉDIATE du profile
       updateProfile({
         tokens: result.new_balance,
-        diamonds: result.diamonds
+        diamonds: result.diamonds || profile?.diamonds || 0
       });
+      console.log('[Tap-to-Earn] ✅ Profile updated!');
 
+      // Animation des pièces
       const coinCount = 5;
       const newCoins: FlyingCoin[] = [];
-
       for (let i = 0; i < coinCount; i++) {
         newCoins.push({
           id: Date.now() + Math.random() + i,
@@ -106,14 +106,12 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
           startY: 0,
         });
       }
-
       setFlyingCoins(newCoins);
 
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('tokens-earned', {
-          detail: { amount: tokensToEarn }
-        }));
-      }
+      // Événement pour le floating +X
+      window.dispatchEvent(new CustomEvent('tokens-earned', {
+        detail: { amount: tokensToEarn }
+      }));
 
       await new Promise(resolve => setTimeout(resolve, 1500));
 
@@ -123,11 +121,9 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
       setShowButton(true);
       onOpenChange(false);
 
-      console.log('[Tap-to-Earn] Collection complete');
+      console.log('[Tap-to-Earn] ✅ Complete!');
     } catch (error: any) {
-      console.error('[Tap-to-Earn] Error earning tokens:', error);
-      console.error('[Tap-to-Earn] Error details:', error.message);
-
+      console.error('[Tap-to-Earn] ❌ Error:', error.message);
       setIsCollecting(false);
       setShowButton(true);
     }
