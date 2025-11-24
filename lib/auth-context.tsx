@@ -14,6 +14,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateTokensOptimistic: (amount: number) => void;
+  updateProfile: (updates: Partial<Profile>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,14 +63,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateTokensOptimistic = (amount: number) => {
-    if (profile) {
-      const newTokens = profile.tokens + amount;
-      console.log(`[Optimistic Update] Current: ${profile.tokens}, Adding: ${amount}, New: ${newTokens}`);
-      setProfile({
-        ...profile,
+    console.log(`[updateTokensOptimistic] Called with amount:`, amount);
+    setProfile((prev) => {
+      if (!prev) {
+        console.log('[updateTokensOptimistic] No profile, skipping');
+        return prev;
+      }
+      const newTokens = prev.tokens + amount;
+      console.log(`[updateTokensOptimistic] Current: ${prev.tokens}, Adding: ${amount}, New: ${newTokens}`);
+      return {
+        ...prev,
         tokens: newTokens
-      });
-    }
+      };
+    });
+  };
+
+  const updateProfile = (updates: Partial<Profile>) => {
+    console.log('[updateProfile] Called with:', updates);
+    setProfile((prev) => {
+      if (!prev) {
+        console.log('[updateProfile] No profile, skipping');
+        return prev;
+      }
+      console.log('[updateProfile] Updating from', prev, 'to', { ...prev, ...updates });
+      return {
+        ...prev,
+        ...updates
+      };
+    });
   };
 
   useEffect(() => {
@@ -185,7 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, refreshProfile, updateTokensOptimistic }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, refreshProfile, updateTokensOptimistic, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

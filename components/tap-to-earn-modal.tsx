@@ -32,7 +32,7 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
   const [flyingCoins, setFlyingCoins] = useState<FlyingCoin[]>([]);
   const [isCollecting, setIsCollecting] = useState(false);
   const [showButton, setShowButton] = useState(true);
-  const { refreshProfile, updateTokensOptimistic, profile } = useAuth();
+  const { updateProfile, profile } = useAuth();
 
   const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
     if (activeTaps >= 3) return;
@@ -88,7 +88,13 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
 
       const result = await earnTokens(tapCount);
       console.log('[Tap-to-Earn] API result:', JSON.stringify(result));
-      console.log('[Tap-to-Earn] New balance should be:', result.new_balance);
+      console.log('[Tap-to-Earn] New balance from API:', result.new_balance);
+
+      console.log('[Tap-to-Earn] Calling updateProfile with tokens:', result.new_balance, 'diamonds:', result.diamonds);
+      updateProfile({
+        tokens: result.new_balance,
+        diamonds: result.diamonds
+      });
 
       const coinCount = 5;
       const newCoins: FlyingCoin[] = [];
@@ -118,7 +124,6 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
       onOpenChange(false);
 
       console.log('[Tap-to-Earn] Collection complete');
-      console.log('[Tap-to-Earn] Profile should now show:', result.new_balance, 'tokens');
     } catch (error: any) {
       console.error('[Tap-to-Earn] Error earning tokens:', error);
       console.error('[Tap-to-Earn] Error details:', error.message);
