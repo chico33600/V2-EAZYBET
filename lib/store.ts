@@ -225,22 +225,3 @@ export const useTutorialStore = create<TutorialState>((set) => ({
   showTutorial: false,
   setShowTutorial: (show) => set({ showTutorial: show }),
 }));
-
-export type Language = 'fr' | 'en';
-
-interface LanguageState {
-  language: Language;
-  setLanguage: (lang: Language) => void;
-}
-
-export const useLanguageStore = create<LanguageState>()(
-  persist(
-    (set) => ({
-      language: 'fr',
-      setLanguage: (lang) => set({ language: lang }),
-    }),
-    {
-      name: 'easybet-language-storage',
-    }
-  )
-);

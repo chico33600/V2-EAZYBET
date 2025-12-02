@@ -8,8 +8,7 @@ import { BetSlip } from '@/components/bet-slip';
 import { useAuth } from '@/lib/auth-context';
 import { fetchMatches, fetchAvailableMatches, getUserBets } from '@/lib/api-client';
 import type { Match } from '@/lib/supabase-client';
-import { useNavigationStore, useBadgeStore, useTutorialStore, useLanguageStore } from '@/lib/store';
-import { translations } from '@/lib/translations';
+import { useNavigationStore, useBadgeStore, useTutorialStore } from '@/lib/store';
 import { ActiveBetCard } from '@/components/active-bet-card';
 import { FinishedBetCard } from '@/components/finished-bet-card';
 import { ActiveComboBetCard } from '@/components/active-combo-bet-card';
@@ -21,8 +20,6 @@ export default function Home() {
   const { activeHomeTab: activeTab, setActiveHomeTab: setActiveTab } = useNavigationStore();
   const { hasNewBet, setHasNewBet } = useBadgeStore();
   const { showTutorial, setShowTutorial } = useTutorialStore();
-  const { language } = useLanguageStore();
-  const t = translations[language];
   const [mounted, setMounted] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
   const [activeBets, setActiveBets] = useState<any[]>([]);
@@ -210,7 +207,7 @@ export default function Home() {
     if (loading) {
       return (
         <div className="text-center py-16 px-4">
-          <p className="text-white">{t.common.loading}</p>
+          <p className="text-white">Chargement...</p>
         </div>
       );
     }
@@ -221,15 +218,15 @@ export default function Home() {
           {competitionGroups.length === 0 ? (
             <div className="text-center py-16 px-4">
               <div className="bg-[#1A1F27] border border-[#30363D] rounded-2xl p-8 shadow-xl">
-                <p className="text-white text-lg font-semibold mb-2">{t.home.noMatches}</p>
+                <p className="text-white text-lg font-semibold mb-2">Aucun match à venir</p>
                 <p className="text-gray-400 text-sm mb-4">
-                  {t.home.noMatchesDesc}
+                  Les prochains matchs apparaîtront ici !
                 </p>
                 <p className="text-yellow-400 text-xs">
-                  {t.home.syncNote}
+                  Les matchs sont synchronisés automatiquement depuis The Odds API.
                 </p>
                 <p className="text-gray-500 text-xs mt-2">
-                  {t.home.adminNote}
+                  Si vous êtes admin, utilisez le bouton "Sync API" dans le panel admin pour forcer une synchronisation.
                 </p>
               </div>
             </div>
@@ -254,7 +251,7 @@ export default function Home() {
         return (
           <div className="mt-6 px-4">
             <div className="text-center py-16">
-              <p className="text-white/50">{t.common.loading}</p>
+              <p className="text-white/50">Chargement...</p>
             </div>
           </div>
         );
@@ -265,9 +262,9 @@ export default function Home() {
           <div className="mt-6 px-4">
             <div className="text-center py-16">
               <div className="bg-[#1A1F27] border border-[#30363D] rounded-2xl p-8 shadow-xl">
-                <p className="text-white text-lg font-semibold mb-2">{t.home.tabs.played}</p>
+                <p className="text-white text-lg font-semibold mb-2">Paris en cours</p>
                 <p className="text-gray-400 text-sm">
-                  {t.home.noBets}. {t.home.noBetsDesc}
+                  Aucun pari en cours. Placez votre premier pari !
                 </p>
               </div>
             </div>
@@ -295,7 +292,7 @@ export default function Home() {
         return (
           <div className="mt-6 px-4">
             <div className="text-center py-16">
-              <p className="text-white/50">{t.common.loading}</p>
+              <p className="text-white/50">Chargement...</p>
             </div>
           </div>
         );
@@ -306,9 +303,9 @@ export default function Home() {
           <div className="mt-6 px-4">
             <div className="text-center py-16">
               <div className="bg-[#1A1F27] border border-[#30363D] rounded-2xl p-8 shadow-xl">
-                <p className="text-white text-lg font-semibold mb-2">{t.home.noHistory}</p>
+                <p className="text-white text-lg font-semibold mb-2">Historique</p>
                 <p className="text-gray-400 text-sm">
-                  {t.home.noHistoryDesc}
+                  L'historique de vos paris apparaîtra ici
                 </p>
               </div>
             </div>

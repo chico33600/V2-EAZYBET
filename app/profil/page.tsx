@@ -4,10 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase-client';
-import { Trophy, TrendingUp, Calendar, LogOut, Settings, ExternalLink, Award, UserPlus, Edit, Key, Shield, HelpCircle, ChevronDown, Languages } from 'lucide-react';
+import { Trophy, TrendingUp, Calendar, LogOut, Settings, ExternalLink, Award, UserPlus, Edit, Key, Shield, HelpCircle, ChevronDown } from 'lucide-react';
 import { FriendsModal } from '@/components/friends-modal';
-import { useLanguageStore } from '@/lib/store';
-import { translations } from '@/lib/translations';
 
 interface Achievement {
   id: string;
@@ -33,11 +31,8 @@ export default function ProfilPage() {
   const [rankLoading, setRankLoading] = useState(true);
   const [friendsModalOpen, setFriendsModalOpen] = useState(false);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
-  const [languageModalOpen, setLanguageModalOpen] = useState(false);
   const { profile, signOut, refreshProfile } = useAuth();
   const router = useRouter();
-  const { language, setLanguage } = useLanguageStore();
-  const t = translations[language];
 
   useEffect(() => {
     loadAchievements();
@@ -201,8 +196,8 @@ export default function ProfilPage() {
                         >
                           <Edit className="text-[#2A84FF]" size={20} />
                           <div>
-                            <p className="text-white font-medium">{t.settings.editProfile}</p>
-                            <p className="text-white/50 text-xs">{t.settings.editProfileDesc}</p>
+                            <p className="text-white font-medium">Modifier le profil</p>
+                            <p className="text-white/50 text-xs">Pseudo, avatar, etc.</p>
                           </div>
                         </button>
 
@@ -215,26 +210,12 @@ export default function ProfilPage() {
                         >
                           <Key className="text-[#F5C144]" size={20} />
                           <div>
-                            <p className="text-white font-medium">{t.settings.changePassword}</p>
-                            <p className="text-white/50 text-xs">{t.settings.changePasswordDesc}</p>
+                            <p className="text-white font-medium">Changer le mot de passe</p>
+                            <p className="text-white/50 text-xs">Sécurisez votre compte</p>
                           </div>
                         </button>
 
                         <div className="border-t border-[#30363D] my-2"></div>
-
-                        <button
-                          onClick={() => {
-                            setLanguageModalOpen(true);
-                            setSettingsMenuOpen(false);
-                          }}
-                          className="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#30363D] transition-colors text-left"
-                        >
-                          <Languages className="text-blue-400" size={20} />
-                          <div>
-                            <p className="text-white font-medium">{t.settings.language}</p>
-                            <p className="text-white/50 text-xs">{t.settings.languageDesc}</p>
-                          </div>
-                        </button>
 
                         <button
                           onClick={() => {
@@ -245,8 +226,8 @@ export default function ProfilPage() {
                         >
                           <Shield className="text-green-400" size={20} />
                           <div>
-                            <p className="text-white font-medium">{t.settings.privacy}</p>
-                            <p className="text-white/50 text-xs">{t.settings.privacyDesc}</p>
+                            <p className="text-white font-medium">Confidentialité</p>
+                            <p className="text-white/50 text-xs">Gérer vos préférences</p>
                           </div>
                         </button>
 
@@ -259,8 +240,8 @@ export default function ProfilPage() {
                         >
                           <HelpCircle className="text-purple-400" size={20} />
                           <div>
-                            <p className="text-white font-medium">{t.settings.help}</p>
-                            <p className="text-white/50 text-xs">{t.settings.helpDesc}</p>
+                            <p className="text-white font-medium">Aide & Support</p>
+                            <p className="text-white/50 text-xs">Besoin d'assistance?</p>
                           </div>
                         </button>
 
@@ -275,8 +256,8 @@ export default function ProfilPage() {
                         >
                           <LogOut className="text-red-400" size={20} />
                           <div>
-                            <p className="text-red-400 font-medium">{t.settings.logout}</p>
-                            <p className="text-white/50 text-xs">{t.settings.logoutDesc}</p>
+                            <p className="text-red-400 font-medium">Déconnexion</p>
+                            <p className="text-white/50 text-xs">Se déconnecter du compte</p>
                           </div>
                         </button>
                       </div>
@@ -398,72 +379,6 @@ export default function ProfilPage() {
             open={friendsModalOpen}
             onClose={() => setFriendsModalOpen(false)}
           />
-
-          {languageModalOpen && (
-            <>
-              <div
-                className="fixed inset-0 bg-black/50 z-50"
-                onClick={() => setLanguageModalOpen(false)}
-              />
-              <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md px-4">
-                <div className="bg-[#1C2128] border border-[#30363D] rounded-2xl shadow-2xl overflow-hidden">
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-white mb-4">{t.settings.language}</h3>
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => {
-                          setLanguage('fr');
-                          setLanguageModalOpen(false);
-                        }}
-                        className={`w-full px-4 py-4 flex items-center justify-between rounded-xl transition-colors ${
-                          language === 'fr'
-                            ? 'bg-[#2A84FF] text-white'
-                            : 'bg-[#0D1117] text-white/70 hover:bg-[#30363D]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">🇫🇷</span>
-                          <span className="font-medium">{t.languages.fr}</span>
-                        </div>
-                        {language === 'fr' && (
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setLanguage('en');
-                          setLanguageModalOpen(false);
-                        }}
-                        className={`w-full px-4 py-4 flex items-center justify-between rounded-xl transition-colors ${
-                          language === 'en'
-                            ? 'bg-[#2A84FF] text-white'
-                            : 'bg-[#0D1117] text-white/70 hover:bg-[#30363D]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">🇬🇧</span>
-                          <span className="font-medium">{t.languages.en}</span>
-                        </div>
-                        {language === 'en' && (
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                    <button
-                      onClick={() => setLanguageModalOpen(false)}
-                      className="w-full mt-4 px-4 py-3 bg-[#30363D] hover:bg-[#3d444d] text-white rounded-xl transition-colors font-medium"
-                    >
-                      {t.common.close}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
         </div>
   );
 }
