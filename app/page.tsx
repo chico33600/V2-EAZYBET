@@ -15,7 +15,6 @@ import { ActiveComboBetCard } from '@/components/active-combo-bet-card';
 import { FinishedComboBetCard } from '@/components/finished-combo-bet-card';
 import { TutorialModal } from '@/components/tutorial-modal';
 import { supabase } from '@/lib/supabase-client';
-import { startAutoSync, stopAutoSync, syncMatches } from '@/lib/match-sync';
 
 export default function Home() {
   const { activeHomeTab: activeTab, setActiveHomeTab: setActiveTab } = useNavigationStore();
@@ -44,16 +43,6 @@ export default function Home() {
       setShowTutorial(true);
     }
   }, [profile, setShowTutorial]);
-
-  useEffect(() => {
-    if (user) {
-      startAutoSync(60 * 60 * 1000);
-    }
-
-    return () => {
-      stopAutoSync();
-    };
-  }, [user]);
 
   const handleTutorialComplete = async () => {
     setShowTutorial(false);
@@ -129,19 +118,20 @@ export default function Home() {
       }
     };
 
-    const handleMatchesUpdated = async () => {
+    const handleMatchesSynced = async () => {
+      console.log('[Home] Matches synced event received!');
       if (activeTab === 'upcoming') {
         const data = await fetchAvailableMatches('real');
         setMatches(data);
+        console.log('[Home] Reloaded matches:', data.length);
       }
     };
 
     window.addEventListener('bet-placed', handleBetPlaced);
-    window.addEventListener('matches-synced', handleMatchesUpdated);
-
+    window.addEventListener('matches-synced', handleMatchesSynced);
     return () => {
       window.removeEventListener('bet-placed', handleBetPlaced);
-      window.removeEventListener('matches-synced', handleMatchesUpdated);
+      window.removeEventListener('matches-synced', handleMatchesSynced);
     };
   }, [activeTab, setHasNewBet]);
 
@@ -165,9 +155,6 @@ export default function Home() {
     'La Liga': '🇪🇸',
     'Serie A': '🇮🇹',
     'Bundesliga': '🇩🇪',
-    'UEFA Champions League': '⭐',
-    'UEFA Europa League': '🏆',
-    'UEFA Europa Conference League': '🥉',
     'Champions League': '⭐',
     'Europa League': '🏆',
     'Europa Conference League': '🥉',
@@ -232,8 +219,14 @@ export default function Home() {
             <div className="text-center py-16 px-4">
               <div className="bg-[#1A1F27] border border-[#30363D] rounded-2xl p-8 shadow-xl">
                 <p className="text-white text-lg font-semibold mb-2">Aucun match à venir</p>
-                <p className="text-gray-400 text-sm">
+                <p className="text-gray-400 text-sm mb-4">
                   Les prochains matchs apparaîtront ici !
+                </p>
+                <p className="text-yellow-400 text-xs">
+                  Les matchs sont synchronisés automatiquement depuis The Odds API.
+                </p>
+                <p className="text-gray-500 text-xs mt-2">
+                  Si vous êtes admin, utilisez le bouton "Sync API" dans le panel admin pour forcer une synchronisation.
                 </p>
               </div>
             </div>

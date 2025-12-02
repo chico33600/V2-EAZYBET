@@ -47,6 +47,9 @@ export function ActiveComboBetCard({ bet }: ActiveComboBetCardProps) {
   const currencyLabel = currency === 'tokens' ? 'jetons' : 'diamants';
   const currencyColor = currency === 'tokens' ? '[#F5C144]' : '[#2A84FF]';
 
+  const hasOngoingMatch = bet.combo_bet_selections.some(sel => sel.matches.status === 'ongoing');
+  const allUpcoming = bet.combo_bet_selections.every(sel => sel.matches.status === 'upcoming');
+
   return (
     <div className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-2 border-purple-500/30 rounded-2xl p-4 shadow-lg hover:border-purple-500/50 transition-all">
       <div className="flex items-start justify-between mb-3">
@@ -59,8 +62,10 @@ export function ActiveComboBetCard({ bet }: ActiveComboBetCardProps) {
             <p className="text-white/70 text-xs">{bet.combo_bet_selections.length} sélections</p>
           </div>
         </div>
-        <div className="bg-[#F5C144]/10 px-3 py-1 rounded-lg">
-          <p className="text-[#F5C144] text-xs font-bold">En attente</p>
+        <div className={`px-3 py-1 rounded-lg ${hasOngoingMatch ? 'bg-blue-500/10' : 'bg-[#F5C144]/10'}`}>
+          <p className={`text-xs font-bold ${hasOngoingMatch ? 'text-blue-400' : 'text-[#F5C144]'}`}>
+            {hasOngoingMatch ? 'En cours ⏳' : 'En attente'}
+          </p>
         </div>
       </div>
 

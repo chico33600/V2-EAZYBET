@@ -53,13 +53,19 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    console.log('🌀 [EDGE] Starting match synchronization...');
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const oddsApiKey = Deno.env.get('ODDS_API_KEY');
 
+    console.log('🔑 [EDGE] Checking API key...');
     if (!oddsApiKey) {
+      console.error('❌ [EDGE] ODDS_API_KEY not configured');
       throw new Error('ODDS_API_KEY not configured');
     }
+
+    console.log('✅ [EDGE] API key found:', oddsApiKey.substring(0, 8) + '...');
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -71,11 +77,13 @@ Deno.serve(async (req: Request) => {
     const now = new Date();
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
+    console.log(`📅 [EDGE] Date range: ${now.toISOString()} to ${sevenDaysFromNow.toISOString()}`);
+
     for (const competition of COMPETITIONS) {
       try {
         const apiUrl = `https://api.the-odds-api.com/v4/sports/${competition.sportKey}/odds/?regions=eu&markets=h2h&apiKey=${oddsApiKey}`;
 
-        console.log(`Fetching ${competition.name}...`);
+        console.log(`🏆 [EDGE] Fetching ${competition.name}...`);
 
         const response = await fetch(apiUrl, {
           method: 'GET',
@@ -84,19 +92,28 @@ Deno.serve(async (req: Request) => {
           },
         });
 
+        console.log(`📡 [EDGE] ${competition.name} response status:`, response.status);
+
         if (!response.ok) {
-          console.error(`Odds API error for ${competition.name}:`, response.status, response.statusText);
+          const errorText = await response.text();
+          console.error(`❌ [EDGE] Odds API error for ${competition.name}:`, response.status, errorText.substring(0, 200));
           totalErrorCount++;
           continue;
         }
 
         const matches: OddsAPIMatch[] = await response.json();
+        console.log(`✅ [EDGE] ${competition.name}: ${matches.length} matches found in API`);
 
         for (const match of matches) {
           try {
             const commenceTime = new Date(match.commence_time);
 
-            if (commenceTime <= now || commenceTime > sevenDaysFromNow) {
+            if (commenceTime <= now) {
+              totalSkippedCount++;
+              continue;
+            }
+
+            if (commenceTime > sevenDaysFromNow) {
               totalSkippedCount++;
               continue;
             }
@@ -140,7 +157,7 @@ Deno.serve(async (req: Request) => {
                 .eq('id', existingMatch.id);
 
               if (updateError) {
-                console.error('Update error:', updateError);
+                console.error('❌ [EDGE] Update error:', updateError);
                 totalErrorCount++;
               } else {
                 totalUpdatedCount++;
@@ -163,24 +180,30 @@ Deno.serve(async (req: Request) => {
                 });
 
               if (insertError) {
-                console.error('Insert error:', insertError);
+                console.error('❌ [EDGE] Insert error:', insertError);
                 totalErrorCount++;
               } else {
                 totalSyncedCount++;
               }
             }
           } catch (err) {
-            console.error('Error processing match:', err);
+            console.error('❌ [EDGE] Error processing match:', err);
             totalErrorCount++;
           }
         }
       } catch (err) {
-        console.error(`Error fetching ${competition.name}:`, err instanceof Error ? err.message : err);
+        console.error(`❌ [EDGE] Error fetching ${competition.name}:`, err instanceof Error ? err.message : err);
         totalErrorCount++;
       }
     }
 
-    console.log(`Sync complete: ${totalSyncedCount} synced, ${totalUpdatedCount} updated, ${totalSkippedCount} skipped, ${totalErrorCount} errors`);
+    console.log('🎉 [EDGE] ========== SYNC COMPLETE ==========');
+    console.log(`📊 [EDGE] Stats:`);
+    console.log(`   - ✨ New matches: ${totalSyncedCount}`);
+    console.log(`   - 🔄 Updated: ${totalUpdatedCount}`);
+    console.log(`   - ⏭️ Skipped: ${totalSkippedCount}`);
+    console.log(`   - ❌ Errors: ${totalErrorCount}`);
+    console.log('==========================================');
 
     const { error: statusUpdateError } = await supabase
       .from('matches')
@@ -190,7 +213,7 @@ Deno.serve(async (req: Request) => {
       .lte('match_date', now.toISOString());
 
     if (statusUpdateError) {
-      console.error('Status update error:', statusUpdateError);
+      console.error('❌ [EDGE] Status update error:', statusUpdateError);
     }
 
     await supabase
@@ -225,7 +248,7 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error) {
-    console.error('Sync error:', error);
+    console.error('❌ [EDGE] Fatal sync error:', error);
     return new Response(
       JSON.stringify({
         success: false,

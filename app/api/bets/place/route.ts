@@ -1,157 +1,197 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest } from 'next/server';
+import { supabase } from '@/lib/supabase-client';
+import { requireAuth, createErrorResponse, createSuccessResponse } from '@/lib/auth-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
+    const { user, response } = await requireAuth(request);
+    if (response) return response;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const body = await request.json();
+    const { match_id, amount, choice, stakeType = 'tokens' } = body;
+
+    if (!match_id || !amount || !choice) {
+      return createErrorResponse('Match ID, amount, and choice are required', 400);
     }
 
-    const supabase = createClient();
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (!['A', 'Draw', 'B'].includes(choice)) {
+      return createErrorResponse('Invalid choice. Must be A, Draw, or B', 400);
     }
 
-    const { matchId, choice, amount } = await request.json();
-
-    if (!matchId || !choice || !amount) {
-      return NextResponse.json(
-        { error: 'Match ID, choice, and amount are required' },
-        { status: 400 }
-      );
+    if (!['tokens', 'diamonds'].includes(stakeType)) {
+      return createErrorResponse('Invalid stake type. Must be tokens or diamonds', 400);
     }
 
     if (amount <= 0) {
-      return NextResponse.json(
-        { error: 'Amount must be greater than 0' },
-        { status: 400 }
-      );
+      return createErrorResponse('Bet amount must be greater than 0', 400);
     }
 
-    if (!['HOME', 'DRAW', 'AWAY'].includes(choice)) {
-      return NextResponse.json(
-        { error: 'Invalid choice' },
-        { status: 400 }
-      );
-    }
-
-    const { data: wallet } = await supabase
-      .from('wallet')
-      .select('tokens')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!wallet || wallet.tokens < amount) {
-      return NextResponse.json(
-        { error: 'Insufficient tokens' },
-        { status: 400 }
-      );
-    }
-
-    const { data: match } = await supabase
+    const { data: match, error: matchError } = await supabase
       .from('matches')
       .select('*')
-      .eq('id', matchId)
-      .single();
+      .eq('id', match_id)
+      .maybeSingle();
 
-    if (!match) {
-      return NextResponse.json(
-        { error: 'Match not found' },
-        { status: 404 }
-      );
+    if (matchError || !match) {
+      return createErrorResponse('Match not found', 404);
     }
 
-    if (match.status !== 'UPCOMING') {
-      return NextResponse.json(
-        { error: 'Match is not available for betting' },
-        { status: 400 }
-      );
+    if (match.status !== 'upcoming') {
+      return createErrorResponse('Cannot bet on this match. It has already started or finished.', 400);
     }
 
-    const { error: walletError } = await supabase
-      .from('wallet')
-      .update({
-        tokens: wallet.tokens - amount,
-      })
-      .eq('user_id', user.id);
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('tokens, diamonds')
+      .eq('id', user!.id)
+      .maybeSingle();
 
-    if (walletError) {
-      return NextResponse.json(
-        { error: 'Failed to deduct tokens' },
-        { status: 500 }
-      );
+    if (profileError || !profile) {
+      return createErrorResponse('Profile not found', 404);
     }
+
+    if (stakeType === 'diamonds') {
+      if (profile.diamonds < amount) {
+        return createErrorResponse('Insufficient diamonds', 400);
+      }
+    } else {
+      if (profile.tokens < amount) {
+        return createErrorResponse('Insufficient tokens', 400);
+      }
+    }
+
+    const odds = choice === 'A' ? match.odds_a : choice === 'Draw' ? match.odds_draw : match.odds_b;
+
+    const updateData = stakeType === 'diamonds'
+      ? { diamonds: profile.diamonds - amount }
+      : { tokens: profile.tokens - amount };
+
+    const { error: deductError } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', user!.id);
+
+    if (deductError) {
+      console.error('Balance deduction error:', deductError);
+      return createErrorResponse('Failed to place bet', 500);
+    }
+
+    const betData: any = {
+      user_id: user!.id,
+      match_id,
+      amount,
+      choice,
+      odds,
+      bet_currency: stakeType,
+      is_diamond_bet: stakeType === 'diamonds',
+      tokens_staked: stakeType === 'tokens' ? amount : 0,
+      diamonds_staked: stakeType === 'diamonds' ? amount : 0,
+      potential_win: 0,
+      potential_diamonds: 0,
+    };
 
     const { data: bet, error: betError } = await supabase
       .from('bets')
-      .insert({
-        user_id: user.id,
-        match_id: matchId,
-        choice,
-        amount,
-        result: 'PENDING',
-        gain: 0,
-      })
+      .insert(betData)
       .select()
       .single();
 
     if (betError) {
+      console.error('Bet creation error:', betError);
+      const refundData = stakeType === 'diamonds'
+        ? { diamonds: profile.diamonds }
+        : { tokens: profile.tokens };
       await supabase
-        .from('wallet')
-        .update({
-          tokens: wallet.tokens,
-        })
-        .eq('user_id', user.id);
-
-      return NextResponse.json(
-        { error: 'Failed to place bet' },
-        { status: 500 }
-      );
+        .from('profiles')
+        .update(refundData)
+        .eq('id', user!.id);
+      return createErrorResponse('Failed to place bet', 500);
     }
 
-    await supabase
-      .from('system_logs')
-      .insert({
-        type: 'bet_placed',
-        payload: {
-          bet_id: bet.id,
-          user_id: user.id,
-          match_id: matchId,
-          choice,
-          amount,
-        },
-      });
+    const { data: currentProfile } = await supabase
+      .from('profiles')
+      .select('total_bets')
+      .eq('id', user!.id)
+      .maybeSingle();
 
-    const { data: updatedWallet } = await supabase
-      .from('wallet')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
+    if (currentProfile) {
+      await supabase
+        .from('profiles')
+        .update({ total_bets: currentProfile.total_bets + 1 })
+        .eq('id', user!.id);
+    }
 
-    return NextResponse.json({
-      message: 'Bet placed successfully',
-      bet,
-      wallet: updatedWallet,
-    }, { status: 201 });
+    const responseData: any = {
+      message: 'Bet placed successfully!',
+      bet: {
+        id: bet.id,
+        match_id: bet.match_id,
+        amount: bet.amount,
+        choice: bet.choice,
+        odds: bet.odds,
+        stake_type: stakeType,
+        created_at: bet.created_at,
+      },
+    };
+
+    if (stakeType === 'diamonds') {
+      responseData.new_diamond_balance = profile.diamonds - amount;
+    } else {
+      responseData.new_token_balance = profile.tokens - amount;
+    }
+
+    return createSuccessResponse(responseData, 201);
 
   } catch (error: any) {
-    console.error('Bet placement error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Place bet error:', error);
+    return createErrorResponse('Internal server error', 500);
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { user, response } = await requireAuth(request);
+    if (response) return response;
+
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+
+    let query = supabase
+      .from('bets')
+      .select(`
+        *,
+        matches:match_id (
+          id,
+          team_a,
+          team_b,
+          league,
+          status,
+          result,
+          match_date
+        )
+      `)
+      .eq('user_id', user!.id)
+      .order('created_at', { ascending: false });
+
+    if (status === 'active') {
+      query = query.is('is_win', null);
+    } else if (status === 'history') {
+      query = query.not('is_win', 'is', null);
+    }
+
+    const { data: bets, error } = await query;
+
+    if (error) {
+      console.error('Fetch bets error:', error);
+      return createErrorResponse('Failed to fetch bets', 500);
+    }
+
+    return createSuccessResponse({
+      bets: bets || [],
+    });
+
+  } catch (error: any) {
+    console.error('Fetch bets error:', error);
+    return createErrorResponse('Internal server error', 500);
   }
 }

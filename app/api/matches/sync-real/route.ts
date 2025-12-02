@@ -45,18 +45,8 @@ const COMPETITIONS: Competition[] = [
 
 export async function POST(request: NextRequest) {
   try {
-    return createSuccessResponse({
-      message: '⚠️ Synchronisation API temporairement désactivée. Les requêtes vers l\'API externe The Odds sont bloquées dans cet environnement. Utilisez le bouton "Matchs Demo" pour ajouter des matchs de test.',
-      stats: {
-        competitions: 0,
-        synced: 0,
-        updated: 0,
-        skipped: 0,
-        errors: 0,
-      },
-    });
+    console.log('🔄 [SYNC] Starting match synchronization...');
 
-    /* DÉSACTIVÉ - L'API externe ne fonctionne pas dans cet environnement
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return createErrorResponse('Unauthorized', 401);
@@ -98,8 +88,11 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.ODDS_API_KEY;
 
     if (!apiKey) {
+      console.error('❌ [SYNC] ODDS_API_KEY not configured in environment');
       return createErrorResponse('API key not configured', 500);
     }
+
+    console.log('✅ [SYNC] API key found:', apiKey.substring(0, 8) + '...');
 
     let totalSyncedCount = 0;
     let totalUpdatedCount = 0;
@@ -107,13 +100,16 @@ export async function POST(request: NextRequest) {
     let totalSkippedCount = 0;
 
     const now = new Date();
-    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    console.log(`📅 [SYNC] Date range: ${now.toISOString()} to ${thirtyDaysFromNow.toISOString()}`);
 
     for (const competition of COMPETITIONS) {
       try {
         const apiUrl = `https://api.the-odds-api.com/v4/sports/${competition.sportKey}/odds/?regions=eu&markets=h2h&apiKey=${apiKey}`;
 
-        console.log(`Fetching ${competition.name}...`);
+        console.log(`🏆 [SYNC] Fetching ${competition.name}...`);
+        console.log(`📡 [SYNC] API URL: ${apiUrl.replace(apiKey, 'HIDDEN')}`);
 
         const response = await fetch(apiUrl, {
           method: 'GET',
@@ -122,22 +118,39 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        console.log(`📊 [SYNC] ${competition.name} response status:`, response.status);
+
         if (!response.ok) {
-          console.error(`Odds API error for ${competition.name}:`, response.status, response.statusText);
+          const errorText = await response.text();
+          console.error(`❌ [SYNC] Odds API error for ${competition.name}:`, {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText,
+          });
           totalErrorCount++;
           continue;
         }
 
         const matches: OddsAPIMatch[] = await response.json();
+        console.log(`✅ [SYNC] ${competition.name}: ${matches.length} matches found in API`);
 
         for (const match of matches) {
           try {
             const commenceTime = new Date(match.commence_time);
 
-            if (commenceTime <= now || commenceTime > sevenDaysFromNow) {
+            if (commenceTime <= now) {
+              console.log(`⏭️ [SYNC] Skipping past match: ${match.home_team} vs ${match.away_team} (${commenceTime.toISOString()})`);
               totalSkippedCount++;
               continue;
             }
+
+            if (commenceTime > thirtyDaysFromNow) {
+              console.log(`⏭️ [SYNC] Skipping far future match: ${match.home_team} vs ${match.away_team} (${commenceTime.toISOString()})`);
+              totalSkippedCount++;
+              continue;
+            }
+
+            console.log(`⚽ [SYNC] Processing: ${match.home_team} vs ${match.away_team}`);
 
             let oddsA = 2.0;
             let oddsDraw = 3.0;
@@ -178,9 +191,10 @@ export async function POST(request: NextRequest) {
                 .eq('id', existingMatch.id);
 
               if (updateError) {
-                console.error('Update error:', updateError);
+                console.error('❌ [SYNC] Update error:', updateError);
                 totalErrorCount++;
               } else {
+                console.log(`🔄 [SYNC] Updated: ${match.home_team} vs ${match.away_team}`);
                 totalUpdatedCount++;
               }
             } else {
@@ -210,9 +224,10 @@ export async function POST(request: NextRequest) {
                 });
 
               if (insertError) {
-                console.error('Insert error:', insertError);
+                console.error('❌ [SYNC] Insert error:', insertError);
                 totalErrorCount++;
               } else {
+                console.log(`✅ [SYNC] Inserted: ${match.home_team} vs ${match.away_team}`);
                 totalSyncedCount++;
               }
             }
@@ -227,38 +242,106 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`Sync complete: ${totalSyncedCount} synced, ${totalUpdatedCount} updated, ${totalSkippedCount} skipped, ${totalErrorCount} errors`);
+    console.log('🎉 [SYNC] ========== SYNC COMPLETE ==========');
+    console.log(`📊 [SYNC] Stats:`);
+    console.log(`   - ✨ New matches: ${totalSyncedCount}`);
+    console.log(`   - 🔄 Updated: ${totalUpdatedCount}`);
+    console.log(`   - ⏭️ Skipped: ${totalSkippedCount}`);
+    console.log(`   - ❌ Errors: ${totalErrorCount}`);
+    console.log('==========================================');
 
-    const { error: statusUpdateError } = await supabase
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+
+    console.log('🔄 [SYNC] Updating match statuses...');
+
+    const { error: statusOngoingError } = await supabase
       .from('matches')
-      .update({ status: 'live' })
+      .update({ status: 'ongoing' })
       .eq('match_mode', 'real')
       .eq('status', 'upcoming')
-      .lte('match_date', now.toISOString());
+      .lte('match_date', now.toISOString())
+      .gte('match_date', twoHoursAgo.toISOString());
 
-    if (statusUpdateError) {
-      console.error('Status update error:', statusUpdateError);
+    if (statusOngoingError) {
+      console.error('Status update to ongoing error:', statusOngoingError);
+    } else {
+      console.log('✅ [SYNC] Updated matches to ongoing');
     }
 
+    const { error: statusFinishedError } = await supabase
+      .from('matches')
+      .update({ status: 'finished' })
+      .eq('match_mode', 'real')
+      .in('status', ['upcoming', 'ongoing'])
+      .lt('match_date', twoHoursAgo.toISOString());
+
+    if (statusFinishedError) {
+      console.error('Status update to finished error:', statusFinishedError);
+    } else {
+      console.log('✅ [SYNC] Updated matches to finished');
+    }
+
+    console.log('🗑️ [SYNC] Cleaning up old matches...');
+
     try {
-      const { error: deleteOldError1 } = await supabase
+      const { data: upcomingMatchesWithoutBets } = await supabase
         .from('matches')
-        .delete()
+        .select('id')
         .eq('match_mode', 'real')
+        .eq('status', 'upcoming')
         .lt('match_date', now.toISOString());
 
-      if (deleteOldError1) {
-        console.error('Delete old matches (past) error:', deleteOldError1);
+      if (upcomingMatchesWithoutBets && upcomingMatchesWithoutBets.length > 0) {
+        for (const match of upcomingMatchesWithoutBets) {
+          const { count: betsCount } = await supabase
+            .from('bets')
+            .select('id', { count: 'exact', head: true })
+            .eq('match_id', match.id);
+
+          if (betsCount === 0) {
+            await supabase
+              .from('matches')
+              .delete()
+              .eq('id', match.id);
+          }
+        }
       }
 
-      const { error: deleteOldError2 } = await supabase
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const { data: finishedMatches } = await supabase
+        .from('matches')
+        .select('id')
+        .eq('match_mode', 'real')
+        .eq('status', 'finished')
+        .lt('match_date', oneDayAgo.toISOString());
+
+      if (finishedMatches && finishedMatches.length > 0) {
+        for (const match of finishedMatches) {
+          const { count: pendingBets } = await supabase
+            .from('bets')
+            .select('id', { count: 'exact', head: true })
+            .eq('match_id', match.id)
+            .is('is_win', null);
+
+          if (pendingBets === 0) {
+            await supabase
+              .from('matches')
+              .delete()
+              .eq('id', match.id);
+          }
+        }
+      }
+
+      const { error: deleteFutureError } = await supabase
         .from('matches')
         .delete()
         .eq('match_mode', 'real')
-        .gt('match_date', sevenDaysFromNow.toISOString());
+        .gt('match_date', thirtyDaysFromNow.toISOString());
 
-      if (deleteOldError2) {
-        console.error('Delete old matches (future) error:', deleteOldError2);
+      if (deleteFutureError) {
+        console.error('Delete far future matches error:', deleteFutureError);
+      } else {
+        console.log('✅ [SYNC] Cleaned up far future matches');
       }
     } catch (err) {
       console.error('Delete old matches error:', err);
@@ -274,10 +357,9 @@ export async function POST(request: NextRequest) {
         errors: totalErrorCount,
       },
     });
-    */
 
   } catch (error: any) {
-    console.error('Sync error:', error);
-    return createErrorResponse('Internal server error', 500);
+    console.error('❌ [SYNC] Fatal error:', error);
+    return createErrorResponse(error.message || 'Internal server error', 500);
   }
 }

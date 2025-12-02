@@ -32,15 +32,10 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
   const [flyingCoins, setFlyingCoins] = useState<FlyingCoin[]>([]);
   const [isCollecting, setIsCollecting] = useState(false);
   const [showButton, setShowButton] = useState(true);
-  const { updateProfile, profile } = useAuth();
+  const { refreshProfile, updateTokensOptimistic, profile } = useAuth();
 
   const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
     if (activeTaps >= 3) return;
-
-    // Vibration sur mobile
-    if (typeof window !== 'undefined' && navigator.vibrate) {
-      navigator.vibrate(50);
-    }
 
     setTapCount((prev) => prev + 1);
     setActiveTaps((prev) => prev + 1);
@@ -83,22 +78,19 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
     const tokensToEarn = tapCount * 1;
 
     try {
-      console.log(`[Tap-to-Earn] 🎯 Starting: ${tapCount} taps = ${tokensToEarn} tokens`);
-      console.log('[Tap-to-Earn] 💰 Current balance:', profile?.tokens);
+      console.log(`[Tap-to-Earn] Starting collection: ${tapCount} taps = ${tokensToEarn} tokens`);
+      console.log('[Tap-to-Earn] Current profile tokens:', profile?.tokens);
 
       const result = await earnTokens(tapCount);
-      console.log('[Tap-to-Earn] ✅ New balance:', result.new_balance);
+      console.log('[Tap-to-Earn] API result:', JSON.stringify(result));
 
-      // Mise à jour IMMÉDIATE du profile
-      updateProfile({
-        tokens: result.new_balance,
-        diamonds: result.diamonds || profile?.diamonds || 0
-      });
-      console.log('[Tap-to-Earn] ✅ Profile updated!');
+      console.log('[Tap-to-Earn] Refreshing profile...');
+      await refreshProfile();
+      console.log('[Tap-to-Earn] Profile refreshed, new balance should be:', result.new_balance);
 
-      // Animation des pièces
       const coinCount = 5;
       const newCoins: FlyingCoin[] = [];
+
       for (let i = 0; i < coinCount; i++) {
         newCoins.push({
           id: Date.now() + Math.random() + i,
@@ -106,12 +98,14 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
           startY: 0,
         });
       }
+
       setFlyingCoins(newCoins);
 
-      // Événement pour le floating +X
-      window.dispatchEvent(new CustomEvent('tokens-earned', {
-        detail: { amount: tokensToEarn }
-      }));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('tokens-earned', {
+          detail: { amount: tokensToEarn }
+        }));
+      }
 
       await new Promise(resolve => setTimeout(resolve, 1500));
 
@@ -121,9 +115,11 @@ export function TapToEarnModal({ open, onOpenChange }: TapToEarnModalProps) {
       setShowButton(true);
       onOpenChange(false);
 
-      console.log('[Tap-to-Earn] ✅ Complete!');
+      console.log('[Tap-to-Earn] Collection complete');
     } catch (error: any) {
-      console.error('[Tap-to-Earn] ❌ Error:', error.message);
+      console.error('[Tap-to-Earn] Error earning tokens:', error);
+      console.error('[Tap-to-Earn] Error details:', error.message);
+
       setIsCollecting(false);
       setShowButton(true);
     }

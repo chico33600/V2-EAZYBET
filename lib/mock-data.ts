@@ -19,6 +19,89 @@ export interface Match {
   teamBStadium?: string | null;
 }
 
+export function generateDemoMatches() {
+  const now = new Date();
+  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const dayAfter = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+  const matches = [
+    {
+      competition: 'Ligue 1',
+      homeTeam: 'Paris Saint Germain',
+      awayTeam: 'Olympique Marseille',
+      matchDate: tomorrow,
+      oddsA: 1.75,
+      oddsDraw: 3.80,
+      oddsB: 4.50,
+    },
+    {
+      competition: 'Ligue 1',
+      homeTeam: 'Olympique Lyonnais',
+      awayTeam: 'AS Monaco',
+      matchDate: tomorrow,
+      oddsA: 2.10,
+      oddsDraw: 3.40,
+      oddsB: 3.30,
+    },
+    {
+      competition: 'Ligue 1',
+      homeTeam: 'LOSC Lille',
+      awayTeam: 'OGC Nice',
+      matchDate: dayAfter,
+      oddsA: 2.25,
+      oddsDraw: 3.20,
+      oddsB: 3.10,
+    },
+    {
+      competition: 'Premier League',
+      homeTeam: 'Manchester City',
+      awayTeam: 'Liverpool',
+      matchDate: tomorrow,
+      oddsA: 1.85,
+      oddsDraw: 3.70,
+      oddsB: 4.20,
+    },
+    {
+      competition: 'Premier League',
+      homeTeam: 'Arsenal',
+      awayTeam: 'Chelsea',
+      matchDate: tomorrow,
+      oddsA: 2.00,
+      oddsDraw: 3.50,
+      oddsB: 3.60,
+    },
+    {
+      competition: 'La Liga',
+      homeTeam: 'Real Madrid',
+      awayTeam: 'Barcelona',
+      matchDate: dayAfter,
+      oddsA: 2.20,
+      oddsDraw: 3.30,
+      oddsB: 3.20,
+    },
+    {
+      competition: 'Serie A',
+      homeTeam: 'Inter Milan',
+      awayTeam: 'AC Milan',
+      matchDate: dayAfter,
+      oddsA: 2.05,
+      oddsDraw: 3.45,
+      oddsB: 3.50,
+    },
+    {
+      competition: 'Bundesliga',
+      homeTeam: 'Bayern Munich',
+      awayTeam: 'Borussia Dortmund',
+      matchDate: tomorrow,
+      oddsA: 1.65,
+      oddsDraw: 4.00,
+      oddsB: 5.50,
+    },
+  ];
+
+  return matches;
+}
+
 export const mockMatches: Match[] = [
   {
     id: '1',

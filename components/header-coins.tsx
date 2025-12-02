@@ -24,13 +24,12 @@ export function HeaderCoins({ onCoinsClick }: HeaderCoinsProps) {
   const coins = mounted && profile ? profile.tokens : 0;
   const diamonds = mounted && profile ? profile.diamonds : 0;
 
-  // Mise à jour IMMÉDIATE du displayCoins quand profile.tokens change
   useEffect(() => {
-    if (mounted && profile) {
-      console.log('[HeaderCoins] 🔄 Profile tokens:', profile.tokens);
+    if (mounted && profile && displayCoins === 0) {
+      console.log('[HeaderCoins] Initial setup, setting displayCoins to:', profile.tokens);
       setDisplayCoins(profile.tokens);
     }
-  }, [mounted, profile?.tokens]);
+  }, [mounted, profile, displayCoins]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -47,6 +46,35 @@ export function HeaderCoins({ onCoinsClick }: HeaderCoinsProps) {
     window.addEventListener('tokens-earned', handleTokensEarned as EventListener);
     return () => window.removeEventListener('tokens-earned', handleTokensEarned as EventListener);
   }, [mounted]);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    console.log('[HeaderCoins] Coins changed:', { oldDisplay: displayCoins, newCoins: coins });
+
+    if (displayCoins !== coins && coins > displayCoins) {
+      console.log('[HeaderCoins] Animating increase from', displayCoins, 'to', coins);
+      const diff = coins - displayCoins;
+      const steps = Math.min(diff, 20);
+      const increment = diff / steps;
+      let current = displayCoins;
+
+      const interval = setInterval(() => {
+        current += increment;
+        if (current >= coins) {
+          setDisplayCoins(coins);
+          clearInterval(interval);
+        } else {
+          setDisplayCoins(Math.round(current));
+        }
+      }, 30);
+
+      return () => clearInterval(interval);
+    } else if (displayCoins !== coins) {
+      console.log('[HeaderCoins] Direct update from', displayCoins, 'to', coins);
+      setDisplayCoins(coins);
+    }
+  }, [coins, displayCoins, mounted]);
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-4 pb-3 header-blur border-b border-[#30363D]/30">

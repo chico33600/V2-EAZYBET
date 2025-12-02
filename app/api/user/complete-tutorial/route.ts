@@ -1,20 +1,36 @@
 import { NextRequest } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { requireAuth, createErrorResponse, createSuccessResponse } from '@/lib/auth-utils';
+import { createClient } from '@supabase/supabase-js';
+import { createErrorResponse, createSuccessResponse } from '@/lib/auth-utils';
 
-export const dynamic = 'force-dynamic';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, response } = await requireAuth(request);
-    if (response) return response;
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return createErrorResponse('Unauthorized', 401);
+    }
 
-    const supabase = createClient();
+    const token = authHeader.replace('Bearer ', '');
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader
+        }
+      }
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return createErrorResponse('Unauthorized', 401);
+    }
 
     const { error: updateError } = await supabase
-      .from('users')
+      .from('profiles')
       .update({ has_seen_tutorial: true })
-      .eq('id', user!.id);
+      .eq('id', user.id);
 
     if (updateError) {
       console.error('Tutorial update error:', updateError);

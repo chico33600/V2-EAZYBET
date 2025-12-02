@@ -5,10 +5,10 @@ export async function fetchMatches(status?: string): Promise<Match[]> {
   let query = supabase
     .from('matches')
     .select('*')
-    .order('start_time', { ascending: true });
+    .order('match_date', { ascending: true });
 
   if (status) {
-    query = query.eq('status', status.toUpperCase());
+    query = query.eq('status', status);
   }
 
   const { data, error } = await query;
@@ -18,18 +18,7 @@ export async function fetchMatches(status?: string): Promise<Match[]> {
     return [];
   }
 
-  return (data || []).map(match => ({
-    ...match,
-    match_date: match.start_time,
-    team_a: match.team_home,
-    team_b: match.team_away,
-    odds_a: match.odd_home,
-    odds_draw: match.odd_draw,
-    odds_b: match.odd_away,
-    league: match.competition,
-    team_a_badge: match.team_home_image,
-    team_b_badge: match.team_away_image,
-  })) as any;
+  return data || [];
 }
 
 export async function fetchAvailableMatches(mode?: 'fictif' | 'real'): Promise<Match[]> {
@@ -37,15 +26,19 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real'): Promise<M
   if (!user) return [];
 
   const now = new Date();
-  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
   let query = supabase
     .from('matches')
     .select('*')
-    .in('status', ['UPCOMING', 'LIVE'])
-    .gte('start_time', now.toISOString())
-    .lte('start_time', sevenDaysFromNow.toISOString())
-    .order('start_time', { ascending: true });
+    .eq('status', 'upcoming')
+    .gt('match_date', now.toISOString())
+    .lte('match_date', thirtyDaysFromNow.toISOString())
+    .order('match_date', { ascending: true });
+
+  if (mode) {
+    query = query.eq('match_mode', mode);
+  }
 
   const { data: matches, error } = await query;
 
@@ -58,7 +51,13 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real'): Promise<M
     .from('bets')
     .select('match_id')
     .eq('user_id', user.id)
-    .eq('result', 'PENDING');
+    .is('is_win', null);
+
+  const { data: comboBets } = await supabase
+    .from('combo_bets')
+    .select('combo_bet_selections(match_id)')
+    .eq('user_id', user.id)
+    .is('is_win', null);
 
   const bettedMatchIds = new Set<string>();
 
@@ -66,63 +65,113 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real'): Promise<M
     userBets.forEach(bet => bettedMatchIds.add(bet.match_id));
   }
 
-  const availableMatches = (matches || []).filter(match => !bettedMatchIds.has(match.id));
+  if (comboBets) {
+    comboBets.forEach(combo => {
+      if (combo.combo_bet_selections) {
+        combo.combo_bet_selections.forEach((sel: any) => {
+          bettedMatchIds.add(sel.match_id);
+        });
+      }
+    });
+  }
 
-  return availableMatches.map(match => ({
-    ...match,
-    match_date: match.start_time,
-    team_a: match.team_home,
-    team_b: match.team_away,
-    odds_a: match.odd_home,
-    odds_draw: match.odd_draw,
-    odds_b: match.odd_away,
-    league: match.competition,
-    team_a_badge: match.team_home_image,
-    team_b_badge: match.team_away_image,
-  })) as any;
+  return (matches || []).filter(match => !bettedMatchIds.has(match.id));
 }
 
 export async function placeBet(matchId: string, amount: number, choice: 'A' | 'Draw' | 'B', currency: 'tokens' | 'diamonds' = 'tokens') {
-  console.log('[placeBet] Starting with:', { matchId, amount, choice, currency });
-
-  const minAmount = currency === 'tokens' ? 10 : 1;
-  if (amount < minAmount) {
-    throw new Error(`Mise minimum : ${minAmount}`);
+  if (amount <= 0) {
+    throw new Error('Le montant doit être supérieur à 0');
   }
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) {
+  const { data: match } = await supabase
+    .from('matches')
+    .select('*')
+    .eq('id', matchId)
+    .maybeSingle();
+
+  if (!match) {
+    throw new Error('Match non trouvé');
+  }
+
+  if (match.status !== 'upcoming') {
+    throw new Error('Ce match n\'est plus disponible pour les paris');
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     throw new Error('Non authentifié');
   }
 
-  const choiceMap: { [key: string]: string } = {
-    'A': 'HOME',
-    'Draw': 'DRAW',
-    'B': 'AWAY',
-  };
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tokens, diamonds, total_bets')
+    .eq('id', user.id)
+    .maybeSingle();
 
-  const response = await fetch('/api/bets/place', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify({
-      matchId,
-      choice: choiceMap[choice],
-      amount,
-    }),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || 'Erreur lors du pari');
+  if (!profile) {
+    throw new Error('Profil non trouvé');
   }
 
-  console.log('[placeBet] Bet placed successfully:', data.bet);
+  if (currency === 'tokens' && profile.tokens < amount) {
+    throw new Error('Jetons insuffisants');
+  }
 
-  return data.bet;
+  if (currency === 'diamonds' && profile.diamonds < amount) {
+    throw new Error('Diamants insuffisants');
+  }
+
+  const odds = choice === 'A' ? match.odds_a : choice === 'Draw' ? match.odds_draw : match.odds_b;
+
+  const updateData: any = {
+    total_bets: profile.total_bets + 1
+  };
+
+  if (currency === 'tokens') {
+    updateData.tokens = profile.tokens - amount;
+  } else {
+    updateData.diamonds = profile.diamonds - amount;
+  }
+
+  await supabase
+    .from('profiles')
+    .update(updateData)
+    .eq('id', user.id);
+
+  const { data: bet, error } = await supabase
+    .from('bets')
+    .insert({
+      user_id: user.id,
+      match_id: matchId,
+      amount,
+      choice,
+      odds,
+      bet_currency: currency,
+      is_diamond_bet: currency === 'diamonds',
+      tokens_staked: currency === 'tokens' ? amount : 0,
+      diamonds_staked: currency === 'diamonds' ? amount : 0,
+      potential_win: 0,
+      potential_diamonds: 0,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    const rollbackData: any = {
+      total_bets: profile.total_bets
+    };
+    if (currency === 'tokens') {
+      rollbackData.tokens = profile.tokens;
+    } else {
+      rollbackData.diamonds = profile.diamonds;
+    }
+    await supabase
+      .from('profiles')
+      .update(rollbackData)
+      .eq('id', user.id);
+    throw new Error('Erreur lors du pari');
+  }
+
+  return bet;
 }
 
 export async function placeCombobet(
@@ -130,53 +179,134 @@ export async function placeCombobet(
   amount: number,
   currency: 'tokens' | 'diamonds' = 'tokens'
 ) {
-  const minAmount = currency === 'tokens' ? 10 : 1;
-  if (amount < minAmount) {
-    throw new Error(`Mise minimum : ${minAmount}`);
+  if (amount <= 0) {
+    throw new Error('Le montant doit être supérieur à 0');
   }
 
   if (selections.length < 2) {
     throw new Error('Un pari combiné nécessite au moins 2 sélections');
   }
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     throw new Error('Non authentifié');
   }
 
-  const choiceMap: { [key: string]: string } = {
-    'A': 'HOME',
-    'Draw': 'DRAW',
-    'B': 'AWAY',
-  };
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tokens, diamonds, total_bets')
+    .eq('id', user.id)
+    .maybeSingle();
 
-  const mappedSelections = selections.map(sel => ({
-    matchId: sel.matchId,
-    choice: choiceMap[sel.choice],
-    odds: sel.odds
-  }));
-
-  const response = await fetch('/api/bets/place', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify({
-      isCombo: true,
-      selections: mappedSelections,
-      amount,
-      currency,
-    }),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || 'Erreur lors du pari combiné');
+  if (!profile) {
+    throw new Error('Profil non trouvé');
   }
 
-  return data.bet;
+  if (currency === 'tokens' && profile.tokens < amount) {
+    throw new Error('Jetons insuffisants');
+  }
+
+  if (currency === 'diamonds' && profile.diamonds < amount) {
+    throw new Error('Diamants insuffisants');
+  }
+
+  const matchIds = selections.map(s => s.matchId);
+  const { data: matches, error: matchesError } = await supabase
+    .from('matches')
+    .select('id, status')
+    .in('id', matchIds);
+
+  if (matchesError || !matches || matches.length !== selections.length) {
+    throw new Error('Un ou plusieurs matchs sont introuvables');
+  }
+
+  const unavailableMatch = matches.find(m => m.status !== 'upcoming');
+  if (unavailableMatch) {
+    throw new Error('Un ou plusieurs matchs ne sont plus disponibles pour les paris');
+  }
+
+  const totalOdds = selections.reduce((acc, sel) => acc * sel.odds, 1);
+  const totalWin = Math.round(amount * totalOdds);
+  const profit = totalWin - amount;
+  const diamondsFromProfit = currency === 'tokens' ? Math.round(profit * 0.01) : 0;
+
+  const updateData: any = {
+    total_bets: profile.total_bets + 1
+  };
+
+  if (currency === 'tokens') {
+    updateData.tokens = profile.tokens - amount;
+  } else {
+    updateData.diamonds = profile.diamonds - amount;
+  }
+
+  await supabase
+    .from('profiles')
+    .update(updateData)
+    .eq('id', user.id);
+
+  const { data: comboBet, error: comboBetError } = await supabase
+    .from('combo_bets')
+    .insert({
+      user_id: user.id,
+      amount,
+      bet_currency: currency,
+      total_odds: totalOdds,
+      potential_win: totalWin,
+      potential_diamonds: diamondsFromProfit,
+    })
+    .select()
+    .single();
+
+  if (comboBetError) {
+    const rollbackData: any = {
+      total_bets: profile.total_bets
+    };
+    if (currency === 'tokens') {
+      rollbackData.tokens = profile.tokens;
+    } else {
+      rollbackData.diamonds = profile.diamonds;
+    }
+    await supabase
+      .from('profiles')
+      .update(rollbackData)
+      .eq('id', user.id);
+    throw new Error('Erreur lors du pari combiné');
+  }
+
+  const selectionsToInsert = selections.map(sel => ({
+    combo_bet_id: comboBet.id,
+    match_id: sel.matchId,
+    choice: sel.choice,
+    odds: sel.odds,
+  }));
+
+  const { error: selectionsError } = await supabase
+    .from('combo_bet_selections')
+    .insert(selectionsToInsert);
+
+  if (selectionsError) {
+    await supabase
+      .from('combo_bets')
+      .delete()
+      .eq('id', comboBet.id);
+
+    const rollbackData: any = {
+      total_bets: profile.total_bets
+    };
+    if (currency === 'tokens') {
+      rollbackData.tokens = profile.tokens;
+    } else {
+      rollbackData.diamonds = profile.diamonds;
+    }
+    await supabase
+      .from('profiles')
+      .update(rollbackData)
+      .eq('id', user.id);
+    throw new Error('Erreur lors de la création des sélections');
+  }
+
+  return comboBet;
 }
 
 export async function getUserBets(status?: 'active' | 'history'): Promise<any[]> {
@@ -189,35 +319,60 @@ export async function getUserBets(status?: 'active' | 'history'): Promise<any[]>
       *,
       matches:match_id (
         id,
-        team_home,
-        team_away,
+        team_a,
+        team_b,
         competition,
         status,
         result,
-        start_time
+        match_date
+      )
+    `)
+    .eq('user_id', user.id);
+
+  let comboBetsQuery = supabase
+    .from('combo_bets')
+    .select(`
+      *,
+      combo_bet_selections (
+        choice,
+        odds,
+        matches:match_id (
+          id,
+          team_a,
+          team_b,
+          competition,
+          status,
+          result,
+          match_date
+        )
       )
     `)
     .eq('user_id', user.id);
 
   if (status === 'active') {
-    simpleBetsQuery = simpleBetsQuery.eq('result', 'PENDING');
+    simpleBetsQuery = simpleBetsQuery.is('is_win', null);
+    comboBetsQuery = comboBetsQuery.is('is_win', null);
   } else if (status === 'history') {
-    simpleBetsQuery = simpleBetsQuery.in('result', ['WIN', 'LOSE']);
+    simpleBetsQuery = simpleBetsQuery.not('is_win', 'is', null);
+    comboBetsQuery = comboBetsQuery.not('is_win', 'is', null);
   }
 
-  const simpleBetsResult = await simpleBetsQuery.order('created_at', { ascending: false });
-  const simpleBets = (simpleBetsResult.data || []).map(bet => ({
+  const [simpleBetsResult, comboBetsResult] = await Promise.all([
+    simpleBetsQuery.order('created_at', { ascending: false }),
+    comboBetsQuery.order('created_at', { ascending: false })
+  ]);
+
+  const simpleBets = simpleBetsResult.data || [];
+  const comboBets = (comboBetsResult.data || []).map(bet => ({
     ...bet,
-    is_combo: false,
-    matches: bet.matches ? {
-      ...bet.matches,
-      team_a: bet.matches.team_home,
-      team_b: bet.matches.team_away,
-      match_date: bet.matches.start_time
-    } : null
+    is_combo: true
   }));
 
-  return simpleBets;
+  const allBets = [...simpleBets, ...comboBets].sort((a, b) => {
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  return allBets;
 }
 
 export async function resetUserAccount() {
@@ -240,83 +395,59 @@ export async function earnTokens(taps: number = 1) {
   console.log('[earnTokens] ========== START ==========');
   console.log('[earnTokens] Called with taps:', taps);
 
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  console.log('[earnTokens] Auth check:', { hasUser: !!user, userId: user?.id, authError });
 
-  if (!session?.access_token) {
-    console.error('[earnTokens] ❌ No session found!');
+  if (!user) {
+    console.error('[earnTokens] No user found!');
     throw new Error('Non authentifié');
   }
 
-  console.log('[earnTokens] ✅ Session found, user:', session.user.id);
-  console.log('[earnTokens] 📡 Calling API /api/user/tap-earn...');
+  const tokensEarned = taps * 1;
 
-  const response = await fetch('/api/user/tap-earn', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify({ taps }),
-  });
+  console.log('[earnTokens] Tokens to earn:', tokensEarned);
 
-  console.log('[earnTokens] API response status:', response.status);
+  console.log('[earnTokens] Calling increment_tokens RPC...');
+  const { data: newBalance, error: updateError } = await supabase
+    .rpc('increment_tokens', {
+      p_user_id: user.id,
+      p_amount: tokensEarned
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    console.error('[earnTokens] ❌ API error:', error);
-    throw new Error(error.error || 'Erreur lors de l\'ajout des jetons');
+  console.log('[earnTokens] RPC result:', { newBalance, updateError });
+
+  if (updateError) {
+    console.error('[earnTokens] RPC error details:', JSON.stringify(updateError));
+    throw new Error('Erreur lors de la mise à jour des jetons: ' + updateError.message);
   }
 
-  const data = await response.json();
-  console.log('[earnTokens] ✅ API response data:', data);
+  console.log('[earnTokens] Inserting tap record...');
+  const { error: insertError } = await supabase
+    .from('tap_earnings')
+    .insert({
+      user_id: user.id,
+      tokens_earned: tokensEarned,
+    });
 
-  if (!data.success || !data.data) {
-    console.error('[earnTokens] ⚠️ Invalid response format:', data);
-    throw new Error('Format de réponse invalide');
-  }
-
-  const tokensEarned = data.data.tokens_earned;
-  const newBalance = data.data.new_balance;
-  const diamonds = data.data.diamonds || 0;
-
-  console.log('[earnTokens] 📢 Dispatching profile-updated event...');
-  window.dispatchEvent(new CustomEvent('profile-updated', {
-    detail: {
-      tokens: newBalance,
-      diamonds: diamonds
-    }
-  }));
-  console.log('[earnTokens] ✅ Event dispatched');
+  console.log('[earnTokens] Insert result:', { insertError });
 
   const result = {
     tokens_earned: tokensEarned,
     new_balance: newBalance,
-    diamonds: diamonds,
-    remaining_taps: data.data.remaining_taps,
+    remaining_taps: null,
   };
 
   console.log('[earnTokens] ========== SUCCESS ==========');
-  console.log('[earnTokens] 📦 Returning result:', result);
+  console.log('[earnTokens] Returning:', result);
 
   return result;
 }
 
 export async function getLeaderboard(limit: number = 100, offset: number = 0) {
-  const { data: entries, error } = await supabase
-    .from('leaderboard')
-    .select(`
-      rank,
-      user_id,
-      diamonds,
-      total_bets,
-      won_bets,
-      win_rate,
-      users:user_id (
-        username,
-        avatar
-      )
-    `)
-    .order('rank', { ascending: true })
+  const { data: players, error } = await supabase
+    .from('profiles')
+    .select('id, username, avatar_url, diamonds, total_bets, won_bets')
+    .order('diamonds', { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (error) {
@@ -324,14 +455,11 @@ export async function getLeaderboard(limit: number = 100, offset: number = 0) {
     return [];
   }
 
-  return (entries || []).map((entry: any) => ({
-    rank: entry.rank,
-    id: entry.user_id,
-    username: entry.users?.username || 'Unknown',
-    avatar_url: entry.users?.avatar || '',
-    diamonds: entry.diamonds,
-    total_bets: entry.total_bets,
-    won_bets: entry.won_bets,
-    win_rate: entry.win_rate,
+  return (players || []).map((player, index) => ({
+    rank: offset + index + 1,
+    ...player,
+    win_rate: player.total_bets > 0
+      ? Math.round((player.won_bets / player.total_bets) * 100)
+      : 0,
   }));
 }

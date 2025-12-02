@@ -14,7 +14,6 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateTokensOptimistic: (amount: number) => void;
-  updateProfile: (updates: Partial<Profile>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,41 +27,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log(`[fetchProfile] Fetching profile for user ${userId}, forceRefresh: ${forceRefresh}`);
 
-      const { data: userData, error: userError } = await supabase
-        .from('users')
+      const query = supabase
+        .from('profiles')
         .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+        .eq('id', userId);
 
-      if (userError) {
-        console.error('[fetchProfile] User error:', userError);
+      const { data, error } = await query.maybeSingle();
+
+      if (error) {
+        console.error('[fetchProfile] Error:', error);
         return;
       }
 
-      const { data: walletData, error: walletError } = await supabase
-        .from('wallet')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (walletError) {
-        console.error('[fetchProfile] Wallet error:', walletError);
-        return;
-      }
-
-      if (userData && walletData) {
-        const profileData = {
-          id: userData.id,
-          username: userData.username,
-          email: userData.email,
-          tokens: walletData.tokens,
-          diamonds: walletData.diamonds,
-          avatar_url: userData.avatar || '',
-          role: userData.is_admin ? 'admin' : 'user',
-          has_seen_tutorial: true,
-        };
-        console.log(`[fetchProfile] Loaded profile with ${profileData.tokens} tokens, diamonds: ${profileData.diamonds}`);
-        setProfile(profileData as any);
+      if (data) {
+        console.log(`[fetchProfile] Loaded profile with ${data.tokens} tokens, diamonds: ${data.diamonds}, role: ${data.role}`);
+        console.log('[fetchProfile] Setting profile state...');
+        setProfile({ ...data });
         console.log('[fetchProfile] Profile state updated');
       } else {
         console.log('[fetchProfile] No profile data returned');
@@ -82,34 +62,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateTokensOptimistic = (amount: number) => {
-    console.log(`[updateTokensOptimistic] Called with amount:`, amount);
-    setProfile((prev) => {
-      if (!prev) {
-        console.log('[updateTokensOptimistic] No profile, skipping');
-        return prev;
-      }
-      const newTokens = prev.tokens + amount;
-      console.log(`[updateTokensOptimistic] Current: ${prev.tokens}, Adding: ${amount}, New: ${newTokens}`);
-      return {
-        ...prev,
+    if (profile) {
+      const newTokens = profile.tokens + amount;
+      console.log(`[Optimistic Update] Current: ${profile.tokens}, Adding: ${amount}, New: ${newTokens}`);
+      setProfile({
+        ...profile,
         tokens: newTokens
-      };
-    });
-  };
-
-  const updateProfile = (updates: Partial<Profile>) => {
-    console.log('[updateProfile] Called with:', updates);
-    setProfile((prev) => {
-      if (!prev) {
-        console.log('[updateProfile] No profile, skipping');
-        return prev;
-      }
-      console.log('[updateProfile] Updating from', prev, 'to', { ...prev, ...updates });
-      return {
-        ...prev,
-        ...updates
-      };
-    });
+      });
+    }
   };
 
   useEffect(() => {
@@ -133,28 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })();
     });
 
-    const handleProfileUpdated = (event: CustomEvent) => {
-      console.log('[AuthContext] Profile updated event received:', event.detail);
-      setProfile((prevProfile) => {
-        if (!prevProfile) {
-          console.log('[AuthContext] No previous profile, skipping update');
-          return prevProfile;
-        }
-        console.log('[AuthContext] Updating profile from', prevProfile.tokens, 'to', event.detail.tokens);
-        return {
-          ...prevProfile,
-          tokens: event.detail.tokens,
-          diamonds: event.detail.diamonds
-        };
-      });
-    };
-
-    window.addEventListener('profile-updated', handleProfileUpdated as EventListener);
-
-    return () => {
-      subscription.unsubscribe();
-      window.removeEventListener('profile-updated', handleProfileUpdated as EventListener);
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -180,46 +119,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, username: string, referrerId?: string | null) => {
     try {
-      const { data: existingUser } = await supabase
-        .from('users')
+      const { data: existingProfile } = await supabase
+        .from('profiles')
         .select('username')
         .eq('username', username)
         .maybeSingle();
 
-      if (existingUser) {
+      if (existingProfile) {
         return { error: 'Username already taken' };
       }
 
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const metadata: any = { username };
+      if (referrerId) {
+        metadata.referrer_id = referrerId;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata,
         },
-        body: JSON.stringify({
-          email,
-          password,
-          username,
-          referralCode: referrerId,
-        }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        return { error: data.error || 'Registration failed' };
+      if (error) {
+        return { error: error.message };
       }
 
       if (data.user) {
-        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (signInError) {
-          return { error: signInError.message };
-        }
-
-        await fetchProfile(authData.user!.id);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await fetchProfile(data.user.id);
       }
 
       return { error: null, data: { user: data.user } };
@@ -235,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, refreshProfile, updateTokensOptimistic, updateProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, refreshProfile, updateTokensOptimistic }}>
       {children}
     </AuthContext.Provider>
   );

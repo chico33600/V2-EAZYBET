@@ -1,0 +1,244 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+};
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 200,
+      headers: corsHeaders,
+    });
+  }
+
+  try {
+    console.log("🎯 [RESOLVE-BETS] Starting bet resolution...");
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("❌ [RESOLVE-BETS] Missing Supabase configuration");
+      return new Response(
+        JSON.stringify({ error: "Missing Supabase configuration" }),
+        {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    const now = new Date();
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+
+    console.log("🔄 [RESOLVE-BETS] Updating match statuses...");
+
+    const updateStatusOngoingResponse = await fetch(
+      `${supabaseUrl}/rest/v1/matches?match_mode=eq.real&status=eq.upcoming&match_date=lte.${now.toISOString()}&match_date=gte.${twoHoursAgo.toISOString()}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": supabaseAnonKey,
+          "Authorization": `Bearer ${supabaseAnonKey}`,
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify({ status: "ongoing" }),
+      }
+    );
+
+    if (!updateStatusOngoingResponse.ok) {
+      console.error("❌ [RESOLVE-BETS] Failed to update match status to ongoing");
+    } else {
+      console.log("✅ [RESOLVE-BETS] Updated match statuses to ongoing");
+    }
+
+    const updateStatusFinishedResponse = await fetch(
+      `${supabaseUrl}/rest/v1/matches?match_mode=eq.real&status=in.(upcoming,ongoing)&match_date=lt.${twoHoursAgo.toISOString()}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": supabaseAnonKey,
+          "Authorization": `Bearer ${supabaseAnonKey}`,
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify({ status: "finished" }),
+      }
+    );
+
+    if (!updateStatusFinishedResponse.ok) {
+      console.error("❌ [RESOLVE-BETS] Failed to update match status to finished");
+    } else {
+      console.log("✅ [RESOLVE-BETS] Updated match statuses to finished");
+    }
+
+    const finishedMatchesResponse = await fetch(
+      `${supabaseUrl}/rest/v1/matches?select=*&status=eq.finished&result=not.is.null`,
+      {
+        headers: {
+          "apikey": supabaseAnonKey,
+          "Authorization": `Bearer ${supabaseAnonKey}`,
+        },
+      }
+    );
+
+    if (!finishedMatchesResponse.ok) {
+      throw new Error("Failed to fetch finished matches");
+    }
+
+    const finishedMatches = await finishedMatchesResponse.json();
+    console.log(`📊 [RESOLVE-BETS] Found ${finishedMatches.length} finished matches`);
+
+    let resolved = 0;
+    let failed = 0;
+
+    for (const match of finishedMatches) {
+      try {
+        const betsResponse = await fetch(
+          `${supabaseUrl}/rest/v1/bets?select=*,profiles!inner(id,tokens,diamonds,won_bets)&match_id=eq.${match.id}&is_win=is.null`,
+          {
+            headers: {
+              "apikey": supabaseAnonKey,
+              "Authorization": `Bearer ${supabaseAnonKey}`,
+            },
+          }
+        );
+
+        if (!betsResponse.ok) {
+          console.error(`❌ [RESOLVE-BETS] Failed to fetch bets for match ${match.id}`);
+          failed++;
+          continue;
+        }
+
+        const bets = await betsResponse.json();
+
+        if (bets.length === 0) {
+          continue;
+        }
+
+        console.log(`🎲 [RESOLVE-BETS] Resolving ${bets.length} bets for match ${match.id}`);
+
+        for (const bet of bets) {
+          const isWin = bet.choice === match.result;
+
+          if (isWin) {
+            let tokensRewarded = 0;
+            let diamondsRewarded = 0;
+
+            if (bet.is_diamond_bet) {
+              diamondsRewarded = Math.floor(bet.diamonds_staked * bet.odds);
+              tokensRewarded = 0;
+            } else {
+              tokensRewarded = Math.floor(bet.tokens_staked * bet.odds);
+              const profit = tokensRewarded - bet.tokens_staked;
+              diamondsRewarded = Math.floor(profit * 0.01);
+            }
+
+            await fetch(
+              `${supabaseUrl}/rest/v1/profiles?id=eq.${bet.user_id}`,
+              {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  "apikey": supabaseAnonKey,
+                  "Authorization": `Bearer ${supabaseAnonKey}`,
+                },
+                body: JSON.stringify({
+                  tokens: bet.profiles.tokens + tokensRewarded,
+                  diamonds: bet.profiles.diamonds + diamondsRewarded,
+                  won_bets: bet.profiles.won_bets + 1,
+                }),
+              }
+            );
+
+            await fetch(
+              `${supabaseUrl}/rest/v1/bets?id=eq.${bet.id}`,
+              {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  "apikey": supabaseAnonKey,
+                  "Authorization": `Bearer ${supabaseAnonKey}`,
+                },
+                body: JSON.stringify({
+                  is_win: true,
+                  tokens_won: tokensRewarded,
+                  diamonds_won: diamondsRewarded,
+                  tokens_rewarded: tokensRewarded,
+                  diamonds_rewarded: diamondsRewarded,
+                }),
+              }
+            );
+
+            console.log(`✅ [RESOLVE-BETS] Bet ${bet.id} won - credited ${tokensRewarded} tokens, ${diamondsRewarded} diamonds`);
+          } else {
+            await fetch(
+              `${supabaseUrl}/rest/v1/bets?id=eq.${bet.id}`,
+              {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  "apikey": supabaseAnonKey,
+                  "Authorization": `Bearer ${supabaseAnonKey}`,
+                },
+                body: JSON.stringify({
+                  is_win: false,
+                  tokens_won: 0,
+                  diamonds_won: 0,
+                  tokens_rewarded: 0,
+                  diamonds_rewarded: 0,
+                }),
+              }
+            );
+
+            console.log(`❌ [RESOLVE-BETS] Bet ${bet.id} lost`);
+          }
+
+          resolved++;
+        }
+      } catch (err) {
+        console.error(`❌ [RESOLVE-BETS] Error resolving match ${match.id}:`, err);
+        failed++;
+      }
+    }
+
+    console.log(`🎉 [RESOLVE-BETS] Resolution complete - ${resolved} bets resolved, ${failed} failed`);
+
+    const data = {
+      ok: true,
+      resolved,
+      failed,
+      message: `Resolved ${resolved} bets, ${failed} failures`,
+    };
+
+    return new Response(JSON.stringify(data), {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (error) {
+    console.error("❌ [RESOLVE-BETS] Fatal error:", error);
+
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Unknown error",
+        ok: false,
+      }),
+      {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  }
+});

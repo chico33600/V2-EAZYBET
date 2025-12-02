@@ -13,6 +13,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [resolving, setResolving] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   const isAdmin = profile?.role === 'admin';
 
@@ -88,6 +89,30 @@ export default function AdminPage() {
     }
   }
 
+  async function handleTestOddsAPI() {
+    setTesting(true);
+
+    try {
+      const response = await fetch('/api/matches/test-odds-api', {
+        method: 'GET',
+      });
+
+      const result = await response.json();
+      console.log('[Admin] Test API Response:', result);
+
+      if (result.success) {
+        alert(`Test API réussi !\n\nStatut: ${result.status}\nNombre de matchs: ${result.itemCount}\n\nVoir la console pour plus de détails.`);
+      } else {
+        alert(`Test API échoué !\n\nErreur: ${result.error || result.statusText}\n\nVoir la console pour plus de détails.`);
+      }
+    } catch (error: any) {
+      console.error('[Admin] Test error:', error);
+      alert(`Erreur : ${error.message}`);
+    } finally {
+      setTesting(false);
+    }
+  }
+
   async function handleSyncRealMatches() {
     if (!confirm('Rafraîchir les matchs réels depuis l\'API ?')) return;
 
@@ -99,6 +124,8 @@ export default function AdminPage() {
         alert('Erreur : Vous devez être connecté');
         return;
       }
+
+      console.log('[Admin] Starting sync...');
 
       const response = await fetch('/api/matches/sync-real', {
         method: 'POST',
@@ -112,7 +139,6 @@ export default function AdminPage() {
       console.log('[Admin] API Response:', result);
 
       if (response.ok) {
-        // L'API enveloppe la réponse dans { success: true, data: {...} }
         const responseData = result.data || result;
         console.log('[Admin] Response data:', responseData);
 
@@ -122,10 +148,13 @@ export default function AdminPage() {
 
         alert(`${message}\n\n${stats.synced} nouveaux matchs\n${stats.updated} matchs mis à jour\n${stats.errors} erreurs`);
         await loadMatches();
+
+        window.dispatchEvent(new CustomEvent('matches-synced'));
       } else {
         alert(`Erreur : ${result.error || 'Erreur inconnue'}`);
       }
     } catch (error: any) {
+      console.error('[Admin] Sync error:', error);
       alert(`Erreur : ${error.message}`);
     } finally {
       setSyncing(false);
@@ -158,14 +187,23 @@ export default function AdminPage() {
           </div>
         </div>
         {isAdmin ? (
-          <button
-            onClick={handleSyncRealMatches}
-            disabled={syncing}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Synchronisation...' : 'Sync API'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleTestOddsAPI}
+              disabled={testing}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {testing ? 'Test...' : 'Test API'}
+            </button>
+            <button
+              onClick={handleSyncRealMatches}
+              disabled={syncing}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Synchronisation...' : 'Sync API'}
+            </button>
+          </div>
         ) : (
           <div className="text-xs text-red-400">Bouton admin masqué (pas admin)</div>
         )}

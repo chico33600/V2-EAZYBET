@@ -40,14 +40,12 @@ export function BetSlip() {
   const singleOdds = isCombo ? 0 : selection.odds;
   const effectiveOdds = isCombo ? comboTotalOdds : singleOdds;
 
-  const totalWin = Math.round(betAmount * effectiveOdds);
+  const totalWin = Math.floor(betAmount * effectiveOdds);
   const profit = totalWin - betAmount;
-  const potentialDiamonds = currency === 'tokens' ? Math.round(profit * 0.01) : 0;
+  const diamondsBonus = currency === 'tokens' ? Math.floor(profit * 0.01) : 0;
 
   const handlePlaceBet = async () => {
     if (!betAmount || betAmount <= 0 || betAmount > availableBalance) return;
-
-    console.log('[BetSlip] Placing bet:', { betAmount, currency, availableBalance });
 
     setIsPlacing(true);
     setError('');
@@ -60,15 +58,12 @@ export function BetSlip() {
           odds: sel.odds
         }));
 
-        console.log('[BetSlip] Placing combo bet:', { comboSelections, betAmount, currency });
         await placeCombobet(comboSelections, betAmount, currency);
       } else {
         const choice = selection.betType === 'home' ? 'A' : selection.betType === 'draw' ? 'Draw' : 'B';
-        console.log('[BetSlip] Placing single bet:', { matchId: selection.match.id, betAmount, choice, currency });
         await placeBet(selection.match.id, betAmount, choice, currency);
       }
 
-      console.log('[BetSlip] Bet placed successfully, refreshing profile');
       await refreshProfile();
 
       if (typeof window !== 'undefined') {
@@ -80,7 +75,6 @@ export function BetSlip() {
       setAmount('');
       setCurrency('tokens');
     } catch (err: any) {
-      console.error('[BetSlip] Error placing bet:', err);
       setError(err.message || 'Erreur lors du placement du pari');
     } finally {
       setIsPlacing(false);
@@ -251,12 +245,12 @@ export function BetSlip() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="Entrez votre mise"
-                  min={currency === 'tokens' ? '10' : '1'}
+                  min="10"
                   className="flex-1 bg-transparent text-white text-lg font-bold focus:outline-none"
                 />
               </div>
               <p className="text-white/50 text-xs">
-                Solde disponible : {availableBalance.toFixed(0)} {currency === 'tokens' ? 'jetons' : 'diamants'} (min. {currency === 'tokens' ? '10' : '1'})
+                Solde disponible : {availableBalance.toFixed(0)} {currency === 'tokens' ? 'jetons' : 'diamants'}
               </p>
             </div>
 
@@ -281,7 +275,7 @@ export function BetSlip() {
                         <p className="text-white/70 text-sm">Bonus diamants (1% du profit)</p>
                         <p className="text-white/50 text-xs">Si vous gagnez</p>
                       </div>
-                      <p className="text-[#2A84FF] font-bold text-2xl">{potentialDiamonds} 💎</p>
+                      <p className="text-[#2A84FF] font-bold text-2xl">{diamondsBonus} 💎</p>
                     </div>
                   </div>
                 </>

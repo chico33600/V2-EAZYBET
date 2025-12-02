@@ -11,6 +11,11 @@ interface FinishedBetCardProps {
     is_win: boolean;
     tokens_won: number;
     diamonds_won: number;
+    is_diamond_bet?: boolean;
+    diamonds_staked?: number;
+    tokens_staked?: number;
+    tokens_rewarded?: number;
+    diamonds_rewarded?: number;
     created_at: string;
     matches: {
       team_a: string;
@@ -93,30 +98,41 @@ export function FinishedBetCard({ bet }: FinishedBetCardProps) {
       </div>
 
       {bet.is_win ? (
-        <div className="flex gap-2">
-          <div className="flex-1 bg-gradient-to-br from-green-500/20 to-green-500/5 border border-green-500/20 rounded-xl p-3">
-            <div className="flex items-center gap-1 mb-1">
-              <Trophy className="w-3 h-3 text-green-400" />
-              <p className="text-white/50 text-xs">Gain</p>
-            </div>
-            <p className="text-green-400 font-bold text-lg">+{bet.tokens_won}</p>
-            <p className="text-white/40 text-xs">jetons</p>
-          </div>
-
-          <div className="flex-1 bg-gradient-to-br from-[#2A84FF]/20 to-[#2A84FF]/5 border border-[#2A84FF]/20 rounded-xl p-3">
+        bet.is_diamond_bet ? (
+          <div className="bg-gradient-to-br from-[#2A84FF]/20 to-[#2A84FF]/5 border border-[#2A84FF]/20 rounded-xl p-3">
             <div className="flex items-center gap-1 mb-1">
               <Trophy className="w-3 h-3 text-[#2A84FF]" />
-              <p className="text-white/50 text-xs">Bonus</p>
+              <p className="text-white/50 text-xs">Gain en diamants</p>
             </div>
-            <p className="text-[#2A84FF] font-bold text-lg">+{bet.diamonds_won}</p>
-            <p className="text-white/40 text-xs">diamants</p>
+            <p className="text-[#2A84FF] font-bold text-lg">+{bet.diamonds_rewarded || bet.diamonds_won} 💎</p>
+            <p className="text-white/40 text-xs">Pari en diamants gagné</p>
           </div>
-        </div>
+        ) : (
+          <div className="flex gap-2">
+            <div className="flex-1 bg-gradient-to-br from-green-500/20 to-green-500/5 border border-green-500/20 rounded-xl p-3">
+              <div className="flex items-center gap-1 mb-1">
+                <Trophy className="w-3 h-3 text-green-400" />
+                <p className="text-white/50 text-xs">Gain</p>
+              </div>
+              <p className="text-green-400 font-bold text-lg">+{bet.tokens_rewarded || bet.tokens_won}</p>
+              <p className="text-white/40 text-xs">jetons</p>
+            </div>
+
+            <div className="flex-1 bg-gradient-to-br from-[#2A84FF]/20 to-[#2A84FF]/5 border border-[#2A84FF]/20 rounded-xl p-3">
+              <div className="flex items-center gap-1 mb-1">
+                <Trophy className="w-3 h-3 text-[#2A84FF]" />
+                <p className="text-white/50 text-xs">Bonus</p>
+              </div>
+              <p className="text-[#2A84FF] font-bold text-lg">+{bet.diamonds_rewarded || bet.diamonds_won}</p>
+              <p className="text-white/40 text-xs">diamants (1%)</p>
+            </div>
+          </div>
+        )
       ) : (
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
           <p className="text-white/50 text-xs mb-1">Perte</p>
-          <p className="text-red-400 font-bold text-lg">-{bet.amount}</p>
-          <p className="text-white/40 text-xs">jetons</p>
+          <p className="text-red-400 font-bold text-lg">-{bet.is_diamond_bet ? bet.diamonds_staked : bet.tokens_staked} {bet.is_diamond_bet ? '💎' : ''}</p>
+          <p className="text-white/40 text-xs">{bet.is_diamond_bet ? 'diamants' : 'jetons'}</p>
         </div>
       )}
     </div>

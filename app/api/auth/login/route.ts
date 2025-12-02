@@ -1,83 +1,72 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextRequest } from 'next/server';
+import { supabase } from '@/lib/supabase-client';
+import { createErrorResponse, createSuccessResponse } from '@/lib/auth-utils';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { email, password } = body;
 
+    // Validation
     if (!email || !password) {
-      return NextResponse.json(
-        { error: 'Email and password are required' },
-        { status: 400 }
-      );
+      return createErrorResponse('E-mail et mot de passe requis', 400);
     }
 
-    const supabase = createClient();
-
+    // Sign in
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
+      if (error.message.includes('Invalid login credentials')) {
+        return createErrorResponse('Identifiants incorrects', 401);
+      }
+      if (error.message.includes('Email not confirmed')) {
+        return createErrorResponse('E-mail non confirmé', 401);
+      }
+      if (error.message.includes('User not found')) {
+        return createErrorResponse('Compte introuvable', 401);
+      }
+      return createErrorResponse('Identifiants incorrects', 401);
     }
 
     if (!data.user || !data.session) {
-      return NextResponse.json(
-        { error: 'Login failed' },
-        { status: 500 }
-      );
+      return createErrorResponse('Échec de la connexion', 500);
     }
 
-    const { data: user } = await supabase
-      .from('users')
+    // Check if email is confirmed
+    if (!data.user.email_confirmed_at) {
+      return createErrorResponse('⚠️ Confirme ton adresse email avant de pouvoir te connecter. Vérifie ta boîte mail.', 403);
+    }
+
+    // Get user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
       .select('*')
       .eq('id', data.user.id)
-      .single();
+      .maybeSingle();
 
-    const { data: wallet } = await supabase
-      .from('wallet')
-      .select('*')
-      .eq('user_id', data.user.id)
-      .single();
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+    }
 
-    await supabase
-      .from('system_logs')
-      .insert({
-        type: 'user_login',
-        payload: {
-          user_id: data.user.id,
-          email: data.user.email,
-        },
-      });
-
-    return NextResponse.json({
+    return createSuccessResponse({
       message: 'Login successful',
       user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        referralCode: user.referral_code,
-        avatar: user.avatar,
-        bio: user.bio,
-        isAdmin: user.is_admin,
-        createdAt: user.created_at,
+        id: data.user.id,
+        email: data.user.email,
+        username: profile?.username,
+        tokens: profile?.tokens,
+        diamonds: profile?.diamonds,
+        has_seen_tutorial: profile?.has_seen_tutorial || false,
       },
-      wallet: wallet || null,
       session: data.session,
       access_token: data.session.access_token,
     });
 
   } catch (error: any) {
     console.error('Login error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return createErrorResponse('Internal server error', 500);
   }
 }
