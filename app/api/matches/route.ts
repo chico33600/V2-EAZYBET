@@ -8,7 +8,9 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const league = searchParams.get('league');
     const mode = searchParams.get('mode');
+    const userId = searchParams.get('userId'); // Pour filtrer les matchs déjà pariés
 
+    // Mise à jour automatique des statuts
     await supabase
       .from('matches')
       .update({ status: 'live' })
@@ -20,10 +22,6 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order('match_date', { ascending: true });
 
-    if (status) {
-      query = query.eq('status', status);
-    }
-
     if (league) {
       query = query.eq('league', league);
     }
@@ -32,8 +30,25 @@ export async function GET(request: NextRequest) {
       query = query.eq('match_mode', mode);
     }
 
+    // Pour les matchs "À venir" : uniquement futurs ET non pariés par l'utilisateur
     if (status === 'upcoming') {
+      query = query.eq('status', 'upcoming');
       query = query.gt('match_date', new Date().toISOString());
+
+      // Si un userId est fourni, exclure les matchs sur lesquels l'utilisateur a déjà parié
+      if (userId) {
+        const { data: userBets } = await supabase
+          .from('bets')
+          .select('match_id')
+          .eq('user_id', userId);
+
+        if (userBets && userBets.length > 0) {
+          const bettedMatchIds = userBets.map(bet => bet.match_id);
+          query = query.not('id', 'in', `(${bettedMatchIds.join(',')})`);
+        }
+      }
+    } else if (status) {
+      query = query.eq('status', status);
     }
 
     const { data: matches, error } = await query;

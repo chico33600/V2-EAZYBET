@@ -205,6 +205,7 @@ Deno.serve(async (req: Request) => {
     console.log(`   - ❌ Errors: ${totalErrorCount}`);
     console.log('==========================================');
 
+    // Mise à jour des statuts des matchs
     const { error: statusUpdateError } = await supabase
       .from('matches')
       .update({ status: 'live' })
@@ -216,17 +217,31 @@ Deno.serve(async (req: Request) => {
       console.error('❌ [EDGE] Status update error:', statusUpdateError);
     }
 
-    await supabase
+    // Suppression UNIQUEMENT des matchs futurs sans paris
+    const { data: matchesToDelete } = await supabase
       .from('matches')
-      .delete()
-      .eq('match_mode', 'real')
-      .lt('match_date', now.toISOString());
-
-    await supabase
-      .from('matches')
-      .delete()
+      .select('id')
       .eq('match_mode', 'real')
       .gt('match_date', sevenDaysFromNow.toISOString());
+
+    if (matchesToDelete && matchesToDelete.length > 0) {
+      for (const match of matchesToDelete) {
+        const { data: bets } = await supabase
+          .from('bets')
+          .select('id')
+          .eq('match_id', match.id)
+          .limit(1);
+
+        if (!bets || bets.length === 0) {
+          await supabase
+            .from('matches')
+            .delete()
+            .eq('id', match.id);
+        }
+      }
+    }
+
+    console.log('✅ [EDGE] Match cleanup completed');
 
     return new Response(
       JSON.stringify({

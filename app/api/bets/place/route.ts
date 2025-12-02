@@ -165,17 +165,24 @@ export async function GET(request: NextRequest) {
           team_a,
           team_b,
           league,
+          competition,
           status,
           result,
-          match_date
+          match_date,
+          odds_a,
+          odds_draw,
+          odds_b
         )
       `)
       .eq('user_id', user!.id)
       .order('created_at', { ascending: false });
 
+    // "active" = paris en attente ou en cours (match pas encore terminé)
     if (status === 'active') {
       query = query.is('is_win', null);
-    } else if (status === 'history') {
+    }
+    // "history" = paris terminés (gagnés ou perdus)
+    else if (status === 'history') {
       query = query.not('is_win', 'is', null);
     }
 

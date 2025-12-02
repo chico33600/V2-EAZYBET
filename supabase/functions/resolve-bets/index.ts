@@ -39,7 +39,8 @@ Deno.serve(async (req: Request) => {
 
     console.log("🔄 [RESOLVE-BETS] Updating match statuses...");
 
-    const updateStatusOngoingResponse = await fetch(
+    // Passer les matchs en "live" quand ils commencent
+    const updateStatusLiveResponse = await fetch(
       `${supabaseUrl}/rest/v1/matches?match_mode=eq.real&status=eq.upcoming&match_date=lte.${now.toISOString()}&match_date=gte.${twoHoursAgo.toISOString()}`,
       {
         method: "PATCH",
@@ -49,18 +50,19 @@ Deno.serve(async (req: Request) => {
           "Authorization": `Bearer ${supabaseAnonKey}`,
           "Prefer": "return=representation",
         },
-        body: JSON.stringify({ status: "ongoing" }),
+        body: JSON.stringify({ status: "live" }),
       }
     );
 
-    if (!updateStatusOngoingResponse.ok) {
-      console.error("❌ [RESOLVE-BETS] Failed to update match status to ongoing");
+    if (!updateStatusLiveResponse.ok) {
+      console.error("❌ [RESOLVE-BETS] Failed to update match status to live");
     } else {
-      console.log("✅ [RESOLVE-BETS] Updated match statuses to ongoing");
+      console.log("✅ [RESOLVE-BETS] Updated match statuses to live");
     }
 
+    // Passer les matchs en "finished" après 2h
     const updateStatusFinishedResponse = await fetch(
-      `${supabaseUrl}/rest/v1/matches?match_mode=eq.real&status=in.(upcoming,ongoing)&match_date=lt.${twoHoursAgo.toISOString()}`,
+      `${supabaseUrl}/rest/v1/matches?match_mode=eq.real&status=in.(upcoming,live)&match_date=lt.${twoHoursAgo.toISOString()}`,
       {
         method: "PATCH",
         headers: {

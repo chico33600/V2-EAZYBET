@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Match not found', 404);
     }
 
-    if (match.status === 'finished') {
+    if (match.status === 'finished' && match.result) {
       return createErrorResponse('Match result already processed', 400);
     }
 
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Failed to update match', 500);
     }
 
-    // Get all bets for this match
+    // Get all bets for this match that haven't been resolved
     const { data: bets, error: betsError } = await supabase
       .from('bets')
       .select('*')
@@ -76,24 +76,42 @@ export async function POST(request: NextRequest) {
     // Process each bet
     for (const bet of bets) {
       const isWin = bet.choice === result;
-      const diamondsWon = isWin ? bet.potential_diamonds : 0;
+      let tokensRewarded = 0;
+      let diamondsRewarded = 0;
+
+      if (isWin) {
+        // Si pari en diamants
+        if (bet.is_diamond_bet) {
+          diamondsRewarded = Math.floor(bet.diamonds_staked * bet.odds);
+        }
+        // Si pari en jetons
+        else {
+          tokensRewarded = Math.floor(bet.tokens_staked * bet.odds);
+          // Bonus : 0,01 diamant par jeton de bénéfice
+          const profit = tokensRewarded - bet.tokens_staked;
+          diamondsRewarded = Math.floor(profit * 0.01);
+        }
+      }
 
       // Update bet
       await supabase
         .from('bets')
         .update({
           is_win: isWin,
-          diamonds_won: diamondsWon,
+          tokens_won: tokensRewarded,
+          diamonds_won: diamondsRewarded,
+          tokens_rewarded: tokensRewarded,
+          diamonds_rewarded: diamondsRewarded,
         })
         .eq('id', bet.id);
 
       if (isWin) {
         winnersCount++;
 
-        // Award diamonds to winner
+        // Créditer les gains
         const { data: profile } = await supabase
           .from('profiles')
-          .select('diamonds, won_bets')
+          .select('tokens, diamonds, won_bets')
           .eq('id', bet.user_id)
           .maybeSingle();
 
@@ -101,7 +119,8 @@ export async function POST(request: NextRequest) {
           await supabase
             .from('profiles')
             .update({
-              diamonds: profile.diamonds + diamondsWon,
+              tokens: profile.tokens + tokensRewarded,
+              diamonds: profile.diamonds + diamondsRewarded,
               won_bets: profile.won_bets + 1,
             })
             .eq('id', bet.user_id);
