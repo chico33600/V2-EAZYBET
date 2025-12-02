@@ -1,6 +1,7 @@
 'use client';
 
-import { useBadgeStore } from '@/lib/store';
+import { useBadgeStore, useLanguageStore } from '@/lib/store';
+import { translations } from '@/lib/translations';
 
 interface TabsMatchsProps {
   activeTab: 'upcoming' | 'played' | 'finished';
@@ -9,6 +10,8 @@ interface TabsMatchsProps {
 
 export function TabsMatchs({ activeTab, onTabChange }: TabsMatchsProps) {
   const { hasNewBet, hasNewResult, setHasNewBet, setHasNewResult } = useBadgeStore();
+  const { language } = useLanguageStore();
+  const t = translations[language];
 
   const handlePlayedClick = () => {
     setHasNewBet(false);
@@ -30,7 +33,7 @@ export function TabsMatchs({ activeTab, onTabChange }: TabsMatchsProps) {
             : 'text-white/60 hover:text-white hover:bg-[#30363D]/30'
         }`}
       >
-        À venir
+        {t.home.tabs.upcoming}
       </button>
 
       <button
@@ -41,7 +44,7 @@ export function TabsMatchs({ activeTab, onTabChange }: TabsMatchsProps) {
             : 'text-white/60 hover:text-white hover:bg-[#30363D]/30'
         }`}
       >
-        Joués
+        {t.home.tabs.played}
         {hasNewBet && (
           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg animate-pulse">
             1
@@ -57,7 +60,7 @@ export function TabsMatchs({ activeTab, onTabChange }: TabsMatchsProps) {
             : 'text-white/60 hover:text-white hover:bg-[#30363D]/30'
         }`}
       >
-        Résultats
+        {t.home.tabs.finished}
         {hasNewResult && (
           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg animate-pulse">
             1

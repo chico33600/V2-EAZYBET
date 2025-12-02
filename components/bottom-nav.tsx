@@ -2,17 +2,21 @@
 
 import { Home, User, Trophy, Gift } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
-
-const navItems = [
-  { icon: Home, label: 'Home', path: '/' },
-  { icon: Trophy, label: 'Classement', path: '/classement' },
-  { icon: Gift, label: 'Airdrop', path: '/airdrop' },
-  { icon: User, label: 'Profil', path: '/profil' },
-];
+import { useLanguageStore } from '@/lib/store';
+import { translations } from '@/lib/translations';
 
 export function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { language } = useLanguageStore();
+  const t = translations[language];
+
+  const navItems = [
+    { icon: Home, label: t.nav.home, path: '/' },
+    { icon: Trophy, label: t.nav.leaderboard, path: '/classement' },
+    { icon: Gift, label: t.nav.airdrop, path: '/airdrop' },
+    { icon: User, label: t.nav.profile, path: '/profil' },
+  ];
 
   return (
     <div className="fixed bottom-0 left-0 right-0 glassmorphism border-t border-[#30363D] px-4 py-2 z-50 safe-area-bottom">
