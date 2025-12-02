@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase-client';
-import { Trophy, TrendingUp, Calendar, LogOut, Settings, ExternalLink, Award, UserPlus } from 'lucide-react';
+import { Trophy, TrendingUp, Calendar, LogOut, Settings, ExternalLink, Award, UserPlus, Edit, Key, Shield, HelpCircle, ChevronDown } from 'lucide-react';
 import { FriendsModal } from '@/components/friends-modal';
 
 interface Achievement {
@@ -30,6 +30,7 @@ export default function ProfilPage() {
   const [loading, setLoading] = useState(true);
   const [rankLoading, setRankLoading] = useState(true);
   const [friendsModalOpen, setFriendsModalOpen] = useState(false);
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const { profile, signOut, refreshProfile } = useAuth();
   const router = useRouter();
 
@@ -168,21 +169,101 @@ export default function ProfilPage() {
                 <h2 className="text-2xl font-bold text-white mb-1">{profile.username}</h2>
                 <p className="text-white/50">Membre depuis {new Date(profile.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</p>
               </div>
-              <div className="flex gap-2">
+              <div className="relative">
                 <button
-                  onClick={() => router.push('/profil/edit')}
-                  className="p-2 hover:bg-[#30363D] rounded-xl transition-colors"
-                  title="Modifier le profil"
+                  onClick={() => setSettingsMenuOpen(!settingsMenuOpen)}
+                  className="p-2 hover:bg-[#30363D] rounded-xl transition-colors flex items-center gap-1"
+                  title="Paramètres"
                 >
                   <Settings className="text-white/50" size={24} />
+                  <ChevronDown className={`text-white/50 transition-transform ${settingsMenuOpen ? 'rotate-180' : ''}`} size={16} />
                 </button>
-                <button
-                  onClick={handleLogout}
-                  className="p-2 hover:bg-[#30363D] rounded-xl transition-colors"
-                  title="Déconnexion"
-                >
-                  <LogOut className="text-white/50" size={24} />
-                </button>
+
+                {settingsMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setSettingsMenuOpen(false)}
+                    />
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-[#1C2128] border border-[#30363D] rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="py-2">
+                        <button
+                          onClick={() => {
+                            router.push('/profil/edit');
+                            setSettingsMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#30363D] transition-colors text-left"
+                        >
+                          <Edit className="text-[#2A84FF]" size={20} />
+                          <div>
+                            <p className="text-white font-medium">Modifier le profil</p>
+                            <p className="text-white/50 text-xs">Pseudo, avatar, etc.</p>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            router.push('/auth/reset-password');
+                            setSettingsMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#30363D] transition-colors text-left"
+                        >
+                          <Key className="text-[#F5C144]" size={20} />
+                          <div>
+                            <p className="text-white font-medium">Changer le mot de passe</p>
+                            <p className="text-white/50 text-xs">Sécurisez votre compte</p>
+                          </div>
+                        </button>
+
+                        <div className="border-t border-[#30363D] my-2"></div>
+
+                        <button
+                          onClick={() => {
+                            alert('Fonctionnalité à venir');
+                            setSettingsMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#30363D] transition-colors text-left"
+                        >
+                          <Shield className="text-green-400" size={20} />
+                          <div>
+                            <p className="text-white font-medium">Confidentialité</p>
+                            <p className="text-white/50 text-xs">Gérer vos préférences</p>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            alert('Contactez-nous sur support@eazybet.com');
+                            setSettingsMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-3 flex items-center gap-3 hover:bg-[#30363D] transition-colors text-left"
+                        >
+                          <HelpCircle className="text-purple-400" size={20} />
+                          <div>
+                            <p className="text-white font-medium">Aide & Support</p>
+                            <p className="text-white/50 text-xs">Besoin d'assistance?</p>
+                          </div>
+                        </button>
+
+                        <div className="border-t border-[#30363D] my-2"></div>
+
+                        <button
+                          onClick={() => {
+                            setSettingsMenuOpen(false);
+                            handleLogout();
+                          }}
+                          className="w-full px-4 py-3 flex items-center gap-3 hover:bg-red-500/10 transition-colors text-left"
+                        >
+                          <LogOut className="text-red-400" size={20} />
+                          <div>
+                            <p className="text-red-400 font-medium">Déconnexion</p>
+                            <p className="text-white/50 text-xs">Se déconnecter du compte</p>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
