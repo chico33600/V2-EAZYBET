@@ -49,7 +49,8 @@ export function ActiveBetCard({ bet }: ActiveBetCardProps) {
   const diamondsBonus = isDiamondBet ? 0 : Math.floor((tokensPotential - stakedAmount) * 0.01);
 
   const matchStatus = bet.matches?.status || 'upcoming';
-  const isOngoing = matchStatus === 'ongoing';
+  const isLive = matchStatus === 'live';
+  const isUpcoming = matchStatus === 'upcoming';
 
   return (
     <div className="bg-[#1C2128] border border-[#30363D] rounded-2xl p-4 shadow-lg hover:border-[#F5C144]/30 transition-all">
@@ -64,9 +65,9 @@ export function ActiveBetCard({ bet }: ActiveBetCardProps) {
             <p className="text-white/40 text-xs">{formatDate(bet.matches.match_date)}</p>
           </div>
         </div>
-        <div className={`px-3 py-1 rounded-lg ${isOngoing ? 'bg-blue-500/10' : 'bg-[#F5C144]/10'}`}>
-          <p className={`text-xs font-bold ${isOngoing ? 'text-blue-400' : 'text-[#F5C144]'}`}>
-            {isOngoing ? 'En cours ⏳' : 'En attente'}
+        <div className={`px-3 py-1 rounded-lg ${isLive ? 'bg-blue-500/10' : 'bg-[#F5C144]/10'}`}>
+          <p className={`text-xs font-bold ${isLive ? 'text-blue-400' : 'text-[#F5C144]'}`}>
+            {isLive ? 'En cours ⏳' : 'En attente'}
           </p>
         </div>
       </div>

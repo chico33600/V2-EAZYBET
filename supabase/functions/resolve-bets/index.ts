@@ -211,13 +211,133 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    console.log(`🎉 [RESOLVE-BETS] Resolution complete - ${resolved} bets resolved, ${failed} failed`);
+    console.log(`🎉 [RESOLVE-BETS] Simple bets resolution complete - ${resolved} bets resolved, ${failed} failed`);
+
+    // Résolution des paris combinés
+    console.log("🎯 [RESOLVE-BETS] Starting combo bets resolution...");
+
+    let comboResolved = 0;
+    let comboFailed = 0;
+
+    // Récupérer tous les paris combinés non résolus
+    const comboBetsResponse = await fetch(
+      `${supabaseUrl}/rest/v1/combo_bets?select=*,combo_bet_selections(match_id,choice,matches!inner(id,status,result))&is_win=is.null`,
+      {
+        headers: {
+          "apikey": supabaseAnonKey,
+          "Authorization": `Bearer ${supabaseAnonKey}`,
+        },
+      }
+    );
+
+    if (comboBetsResponse.ok) {
+      const comboBets = await comboBetsResponse.json();
+      console.log(`📊 [RESOLVE-BETS] Found ${comboBets.length} unresolved combo bets`);
+
+      for (const comboBet of comboBets) {
+        try {
+          const selections = comboBet.combo_bet_selections || [];
+
+          // Vérifier si tous les matchs sont terminés
+          const allFinished = selections.every(
+            (sel: any) => sel.matches && sel.matches.status === 'finished' && sel.matches.result
+          );
+
+          if (!allFinished) {
+            continue; // Passer au prochain combo bet si tous les matchs ne sont pas terminés
+          }
+
+          // Vérifier si toutes les sélections sont gagnantes
+          const allWon = selections.every(
+            (sel: any) => sel.matches && sel.choice === sel.matches.result
+          );
+
+          let tokensRewarded = 0;
+          let diamondsRewarded = 0;
+
+          if (allWon) {
+            // Calculer les gains
+            if (comboBet.bet_currency === 'diamonds') {
+              diamondsRewarded = Math.floor(comboBet.amount * comboBet.total_odds);
+            } else {
+              tokensRewarded = Math.floor(comboBet.amount * comboBet.total_odds);
+              const profit = tokensRewarded - comboBet.amount;
+              diamondsRewarded = Math.floor(profit * 0.01);
+            }
+
+            // Récupérer le profil
+            const profileResponse = await fetch(
+              `${supabaseUrl}/rest/v1/profiles?select=tokens,diamonds,won_bets&id=eq.${comboBet.user_id}`,
+              {
+                headers: {
+                  "apikey": supabaseAnonKey,
+                  "Authorization": `Bearer ${supabaseAnonKey}`,
+                },
+              }
+            );
+
+            if (profileResponse.ok) {
+              const profiles = await profileResponse.json();
+              if (profiles && profiles.length > 0) {
+                const profile = profiles[0];
+
+                // Créditer les gains
+                await fetch(
+                  `${supabaseUrl}/rest/v1/profiles?id=eq.${comboBet.user_id}`,
+                  {
+                    method: "PATCH",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "apikey": supabaseAnonKey,
+                      "Authorization": `Bearer ${supabaseAnonKey}`,
+                    },
+                    body: JSON.stringify({
+                      tokens: profile.tokens + tokensRewarded,
+                      diamonds: profile.diamonds + diamondsRewarded,
+                      won_bets: profile.won_bets + 1,
+                    }),
+                  }
+                );
+              }
+            }
+          }
+
+          // Mettre à jour le pari combiné
+          await fetch(
+            `${supabaseUrl}/rest/v1/combo_bets?id=eq.${comboBet.id}`,
+            {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                "apikey": supabaseAnonKey,
+                "Authorization": `Bearer ${supabaseAnonKey}`,
+              },
+              body: JSON.stringify({
+                is_win: allWon,
+                tokens_won: tokensRewarded,
+                diamonds_won: diamondsRewarded,
+              }),
+            }
+          );
+
+          console.log(`${allWon ? '✅' : '❌'} [RESOLVE-BETS] Combo bet ${comboBet.id} ${allWon ? 'won' : 'lost'}`);
+          comboResolved++;
+        } catch (err) {
+          console.error(`❌ [RESOLVE-BETS] Error resolving combo bet ${comboBet.id}:`, err);
+          comboFailed++;
+        }
+      }
+    }
+
+    console.log(`🎉 [RESOLVE-BETS] Combo bets resolution complete - ${comboResolved} resolved, ${comboFailed} failed`);
 
     const data = {
       ok: true,
       resolved,
+      comboResolved,
       failed,
-      message: `Resolved ${resolved} bets, ${failed} failures`,
+      comboFailed,
+      message: `Resolved ${resolved} simple bets and ${comboResolved} combo bets, ${failed + comboFailed} failures`,
     };
 
     return new Response(JSON.stringify(data), {
