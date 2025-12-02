@@ -52,6 +52,13 @@ export function ActiveBetCard({ bet }: ActiveBetCardProps) {
   const isLive = matchStatus === 'live';
   const isUpcoming = matchStatus === 'upcoming';
 
+  // Debug logs
+  console.log('[ActiveBetCard] Match:', bet.matches.team_a, 'vs', bet.matches.team_b);
+  console.log('[ActiveBetCard] Match date:', bet.matches.match_date);
+  console.log('[ActiveBetCard] Match status:', matchStatus);
+  console.log('[ActiveBetCard] Current time:', new Date().toISOString());
+  console.log('[ActiveBetCard] Is live?', isLive);
+
   return (
     <div className="bg-[#1C2128] border border-[#30363D] rounded-2xl p-4 shadow-lg hover:border-[#F5C144]/30 transition-all">
       <div className="flex items-start justify-between mb-3">
