@@ -49,6 +49,9 @@ export function ActiveComboBetCard({ bet }: ActiveComboBetCardProps) {
 
   const hasLiveMatch = bet.combo_bet_selections.some(sel => sel.matches.status === 'live');
   const allUpcoming = bet.combo_bet_selections.every(sel => sel.matches.status === 'upcoming');
+  const hasFinishedWithoutResult = bet.combo_bet_selections.some(
+    sel => sel.matches.status === 'finished' && !(sel.matches as any).result
+  );
 
   return (
     <div className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-2 border-purple-500/30 rounded-2xl p-4 shadow-lg hover:border-purple-500/50 transition-all">
@@ -62,9 +65,13 @@ export function ActiveComboBetCard({ bet }: ActiveComboBetCardProps) {
             <p className="text-white/70 text-xs">{bet.combo_bet_selections.length} sélections</p>
           </div>
         </div>
-        <div className={`px-3 py-1 rounded-lg ${hasLiveMatch ? 'bg-blue-500/10' : 'bg-[#F5C144]/10'}`}>
-          <p className={`text-xs font-bold ${hasLiveMatch ? 'text-blue-400' : 'text-[#F5C144]'}`}>
-            {hasLiveMatch ? 'En cours ⏳' : 'En attente'}
+        <div className={`px-3 py-1 rounded-lg ${
+          hasFinishedWithoutResult ? 'bg-orange-500/10' : hasLiveMatch ? 'bg-blue-500/10' : 'bg-[#F5C144]/10'
+        }`}>
+          <p className={`text-xs font-bold ${
+            hasFinishedWithoutResult ? 'text-orange-400' : hasLiveMatch ? 'text-blue-400' : 'text-[#F5C144]'
+          }`}>
+            {hasFinishedWithoutResult ? 'En attente du résultat 🔍' : hasLiveMatch ? 'En cours ⏳' : 'En attente'}
           </p>
         </div>
       </div>

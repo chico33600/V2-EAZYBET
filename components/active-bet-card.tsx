@@ -49,15 +49,20 @@ export function ActiveBetCard({ bet }: ActiveBetCardProps) {
   const diamondsBonus = isDiamondBet ? 0 : Math.floor((tokensPotential - stakedAmount) * 0.01);
 
   const matchStatus = bet.matches?.status || 'upcoming';
+  const matchResult = (bet.matches as any)?.result || null;
   const isLive = matchStatus === 'live';
   const isUpcoming = matchStatus === 'upcoming';
+  const isFinishedWithoutResult = matchStatus === 'finished' && !matchResult;
+  const isAwaitingResult = isFinishedWithoutResult;
 
   // Debug logs
   console.log('[ActiveBetCard] Match:', bet.matches.team_a, 'vs', bet.matches.team_b);
   console.log('[ActiveBetCard] Match date:', bet.matches.match_date);
   console.log('[ActiveBetCard] Match status:', matchStatus);
+  console.log('[ActiveBetCard] Match result:', matchResult);
   console.log('[ActiveBetCard] Current time:', new Date().toISOString());
   console.log('[ActiveBetCard] Is live?', isLive);
+  console.log('[ActiveBetCard] Is awaiting result?', isAwaitingResult);
 
   return (
     <div className="bg-[#1C2128] border border-[#30363D] rounded-2xl p-4 shadow-lg hover:border-[#F5C144]/30 transition-all">
@@ -72,9 +77,13 @@ export function ActiveBetCard({ bet }: ActiveBetCardProps) {
             <p className="text-white/40 text-xs">{formatDate(bet.matches.match_date)}</p>
           </div>
         </div>
-        <div className={`px-3 py-1 rounded-lg ${isLive ? 'bg-blue-500/10' : 'bg-[#F5C144]/10'}`}>
-          <p className={`text-xs font-bold ${isLive ? 'text-blue-400' : 'text-[#F5C144]'}`}>
-            {isLive ? 'En cours ⏳' : 'En attente'}
+        <div className={`px-3 py-1 rounded-lg ${
+          isAwaitingResult ? 'bg-orange-500/10' : isLive ? 'bg-blue-500/10' : 'bg-[#F5C144]/10'
+        }`}>
+          <p className={`text-xs font-bold ${
+            isAwaitingResult ? 'text-orange-400' : isLive ? 'text-blue-400' : 'text-[#F5C144]'
+          }`}>
+            {isAwaitingResult ? 'En attente du résultat 🔍' : isLive ? 'En cours ⏳' : 'En attente'}
           </p>
         </div>
       </div>

@@ -324,7 +324,10 @@ export async function getUserBets(status?: 'active' | 'history'): Promise<any[]>
         competition,
         status,
         result,
-        match_date
+        match_date,
+        odds_a,
+        odds_draw,
+        odds_b
       )
     `)
     .eq('user_id', user.id);
@@ -343,7 +346,10 @@ export async function getUserBets(status?: 'active' | 'history'): Promise<any[]>
           competition,
           status,
           result,
-          match_date
+          match_date,
+          odds_a,
+          odds_draw,
+          odds_b
         )
       )
     `)
