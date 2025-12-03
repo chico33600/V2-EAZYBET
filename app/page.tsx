@@ -14,6 +14,7 @@ import { FinishedBetCard } from '@/components/finished-bet-card';
 import { ActiveComboBetCard } from '@/components/active-combo-bet-card';
 import { FinishedComboBetCard } from '@/components/finished-combo-bet-card';
 import { TutorialModal } from '@/components/tutorial-modal';
+import { PromoBanner } from '@/components/promo-banner';
 import { supabase } from '@/lib/supabase-client';
 
 export default function Home() {
@@ -291,16 +292,29 @@ export default function Home() {
               </div>
             </div>
           ) : (
-            competitionGroups.map((group) => (
-              <div key={group.competition} className="mb-6">
-                <div className="px-4 mb-4">
-                  <h2 className="text-white text-xl font-bold">
-                    {group.emoji} {group.competition}
-                  </h2>
+            <>
+              {competitionGroups.map((group, index) => (
+                <div key={group.competition}>
+                  <div className="mb-6">
+                    <div className="px-4 mb-4">
+                      <h2 className="text-white text-xl font-bold">
+                        {group.emoji} {group.competition}
+                      </h2>
+                    </div>
+                    <LeagueSection leagueGroup={{ league: group.competition, matches: group.matches }} />
+                  </div>
+
+                  {/* Insert promo banners between competitions */}
+                  {index < competitionGroups.length - 1 && (
+                    <div className="px-4">
+                      {index % 3 === 0 && <PromoBanner type="token" />}
+                      {index % 3 === 1 && <PromoBanner type="friends" />}
+                      {index % 3 === 2 && <PromoBanner type="global" />}
+                    </div>
+                  )}
                 </div>
-                <LeagueSection leagueGroup={{ league: group.competition, matches: group.matches }} />
-              </div>
-            ))
+              ))}
+            </>
           )}
         </div>
       );
