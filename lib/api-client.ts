@@ -26,14 +26,14 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real'): Promise<M
   if (!user) return [];
 
   const now = new Date();
-  const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+  const fiveDaysFromNow = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
 
   let query = supabase
     .from('matches')
     .select('*')
     .eq('status', 'upcoming')
     .gt('match_date', now.toISOString())
-    .lte('match_date', threeDaysFromNow.toISOString())
+    .lte('match_date', fiveDaysFromNow.toISOString())
     .order('match_date', { ascending: true });
 
   if (mode) {
