@@ -53,6 +53,26 @@ export function ActiveComboBetCard({ bet }: ActiveComboBetCardProps) {
     sel => sel.matches.status === 'finished' && !(sel.matches as any).result
   );
 
+  // 🔥 Enhanced debug logs for combo bets (as requested)
+  const nowUtc = new Date().toISOString();
+  console.log('=== [ActiveComboBetCard] Debug Info ===');
+  console.log('Combo Bet ID:', bet.id);
+  console.log('Number of selections:', bet.combo_bet_selections.length);
+  console.log('Current UTC Time:', nowUtc);
+  bet.combo_bet_selections.forEach((sel, idx) => {
+    console.log(`Selection ${idx + 1}:`, sel.matches.team_a, 'vs', sel.matches.team_b);
+    console.log(`  Match ID:`, sel.matches.id);
+    console.log(`  Match Date:`, sel.matches.match_date);
+    console.log(`  End Time:`, (sel.matches as any).end_time);
+    console.log(`  Status:`, sel.matches.status);
+    console.log(`  Result:`, (sel.matches as any).result);
+    console.log(`  Choice:`, sel.choice);
+  });
+  console.log('Has Live Match?', hasLiveMatch);
+  console.log('All Upcoming?', allUpcoming);
+  console.log('Has Finished Without Result?', hasFinishedWithoutResult);
+  console.log('======================================');
+
   return (
     <div className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-2 border-purple-500/30 rounded-2xl p-4 shadow-lg hover:border-purple-500/50 transition-all">
       <div className="flex items-start justify-between mb-3">
