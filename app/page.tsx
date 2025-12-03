@@ -72,43 +72,36 @@ export default function Home() {
   };
 
 
-  // Fonction pour mettre à jour les statuts des matchs (NOUVELLE LOGIQUE)
+  // Fonction pour mettre à jour les statuts des matchs
   const updateMatchStatuses = async () => {
-    const nowUtc = new Date().toISOString();
-    console.log('[Home] 🔄 Updating match statuses at UTC:', nowUtc);
+    const now = new Date().toISOString();
+    console.log('[Home] Updating match statuses at', now);
 
-    // NOUVELLE LOGIQUE:
-    // upcoming: now < match_date
-    // live: match_date <= now < end_time
-    // finished: now >= end_time
-
-    // Mettre à jour les matchs en "live": match_date <= now AND end_time > now
-    const { data: liveUpdated, error: liveError } = await supabase
+    // Mettre à jour les matchs en "live"
+    const { error: liveError } = await supabase
       .from('matches')
       .update({ status: 'live' })
       .eq('status', 'upcoming')
-      .lte('match_date', nowUtc)
-      .gt('end_time', nowUtc)
-      .select();
+      .lte('match_date', now);
 
     if (liveError) {
-      console.error('[Home] ❌ Error updating to live:', liveError);
+      console.error('[Home] Error updating to live:', liveError);
     } else {
-      console.log(`[Home] ✅ Updated ${liveUpdated?.length || 0} matches to LIVE status`);
+      console.log('[Home] Updated matches to live status');
     }
 
-    // Mettre à jour les matchs en "finished": end_time <= now
-    const { data: finishedUpdated, error: finishedError } = await supabase
+    // Mettre à jour les matchs en "finished" (après 2h)
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const { error: finishedError } = await supabase
       .from('matches')
       .update({ status: 'finished' })
       .in('status', ['upcoming', 'live'])
-      .lte('end_time', nowUtc)
-      .select();
+      .lt('match_date', twoHoursAgo);
 
     if (finishedError) {
-      console.error('[Home] ❌ Error updating to finished:', finishedError);
+      console.error('[Home] Error updating to finished:', finishedError);
     } else {
-      console.log(`[Home] ✅ Updated ${finishedUpdated?.length || 0} matches to FINISHED status`);
+      console.log('[Home] Updated matches to finished status');
     }
   };
 

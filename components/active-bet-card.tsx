@@ -50,27 +50,19 @@ export function ActiveBetCard({ bet }: ActiveBetCardProps) {
 
   const matchStatus = bet.matches?.status || 'upcoming';
   const matchResult = (bet.matches as any)?.result || null;
-  const matchDate = bet.matches?.match_date;
-  const endTime = (bet.matches as any)?.end_time;
   const isLive = matchStatus === 'live';
   const isUpcoming = matchStatus === 'upcoming';
   const isFinishedWithoutResult = matchStatus === 'finished' && !matchResult;
   const isAwaitingResult = isFinishedWithoutResult;
 
-  // 🔥 Enhanced debug logs (as requested)
-  const nowUtc = new Date().toISOString();
-  console.log('=== [ActiveBetCard] Debug Info ===');
-  console.log('Match:', bet.matches.team_a, 'vs', bet.matches.team_b);
-  console.log('Match ID:', (bet.matches as any)?.id);
-  console.log('Match Date (commence_a):', matchDate);
-  console.log('End Time (finit_a):', endTime);
-  console.log('Match Status:', matchStatus);
-  console.log('Match Result:', matchResult);
-  console.log('Current UTC Time:', nowUtc);
-  console.log('Is Live?', isLive);
-  console.log('Is Awaiting Result?', isAwaitingResult);
-  console.log('Bet Choice:', bet.choice);
-  console.log('================================');
+  // Debug logs
+  console.log('[ActiveBetCard] Match:', bet.matches.team_a, 'vs', bet.matches.team_b);
+  console.log('[ActiveBetCard] Match date:', bet.matches.match_date);
+  console.log('[ActiveBetCard] Match status:', matchStatus);
+  console.log('[ActiveBetCard] Match result:', matchResult);
+  console.log('[ActiveBetCard] Current time:', new Date().toISOString());
+  console.log('[ActiveBetCard] Is live?', isLive);
+  console.log('[ActiveBetCard] Is awaiting result?', isAwaitingResult);
 
   return (
     <div className="bg-[#1C2128] border border-[#30363D] rounded-2xl p-4 shadow-lg hover:border-[#F5C144]/30 transition-all">

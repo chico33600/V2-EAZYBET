@@ -325,7 +325,6 @@ export async function getUserBets(status?: 'active' | 'history'): Promise<any[]>
         status,
         result,
         match_date,
-        end_time,
         odds_a,
         odds_draw,
         odds_b
@@ -348,7 +347,6 @@ export async function getUserBets(status?: 'active' | 'history'): Promise<any[]>
           status,
           result,
           match_date,
-          end_time,
           odds_a,
           odds_draw,
           odds_b

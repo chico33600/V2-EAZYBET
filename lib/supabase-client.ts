@@ -92,7 +92,6 @@ export interface Match {
   status: 'upcoming' | 'live' | 'finished';
   result: 'A' | 'Draw' | 'B' | null;
   match_date: string;
-  end_time: string;
   created_at: string;
   updated_at: string;
   team_a_badge?: string | null;
