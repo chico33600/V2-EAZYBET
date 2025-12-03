@@ -37,9 +37,32 @@ Deno.serve(async (req: Request) => {
     const now = new Date();
     const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
 
+    console.log("🔄 [RESOLVE-BETS] Calling sync-matches to fetch scores...");
+    try {
+      const syncResponse = await fetch(
+        `${supabaseUrl}/functions/v1/sync-matches`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": supabaseAnonKey,
+            "Authorization": `Bearer ${supabaseAnonKey}`,
+          },
+        }
+      );
+
+      if (syncResponse.ok) {
+        const syncData = await syncResponse.json();
+        console.log(`✅ [RESOLVE-BETS] Sync complete - ${syncData.stats?.scoresUpdated || 0} scores updated`);
+      } else {
+        console.error("❌ [RESOLVE-BETS] Sync-matches failed:", syncResponse.status);
+      }
+    } catch (syncError) {
+      console.error("❌ [RESOLVE-BETS] Failed to call sync-matches:", syncError);
+    }
+
     console.log("🔄 [RESOLVE-BETS] Updating match statuses...");
 
-    // Passer les matchs en "live" quand ils commencent
     const updateStatusLiveResponse = await fetch(
       `${supabaseUrl}/rest/v1/matches?match_mode=eq.real&status=eq.upcoming&match_date=lte.${now.toISOString()}&match_date=gte.${twoHoursAgo.toISOString()}`,
       {
@@ -60,7 +83,6 @@ Deno.serve(async (req: Request) => {
       console.log("✅ [RESOLVE-BETS] Updated match statuses to live");
     }
 
-    // Passer les matchs en "finished" après 2h
     const updateStatusFinishedResponse = await fetch(
       `${supabaseUrl}/rest/v1/matches?match_mode=eq.real&status=in.(upcoming,live)&match_date=lt.${twoHoursAgo.toISOString()}`,
       {
@@ -213,13 +235,11 @@ Deno.serve(async (req: Request) => {
 
     console.log(`🎉 [RESOLVE-BETS] Simple bets resolution complete - ${resolved} bets resolved, ${failed} failed`);
 
-    // Résolution des paris combinés
     console.log("🎯 [RESOLVE-BETS] Starting combo bets resolution...");
 
     let comboResolved = 0;
     let comboFailed = 0;
 
-    // Récupérer tous les paris combinés non résolus
     const comboBetsResponse = await fetch(
       `${supabaseUrl}/rest/v1/combo_bets?select=*,combo_bet_selections(match_id,choice,matches!inner(id,status,result))&is_win=is.null`,
       {
@@ -238,16 +258,14 @@ Deno.serve(async (req: Request) => {
         try {
           const selections = comboBet.combo_bet_selections || [];
 
-          // Vérifier si tous les matchs sont terminés
           const allFinished = selections.every(
             (sel: any) => sel.matches && sel.matches.status === 'finished' && sel.matches.result
           );
 
           if (!allFinished) {
-            continue; // Passer au prochain combo bet si tous les matchs ne sont pas terminés
+            continue;
           }
 
-          // Vérifier si toutes les sélections sont gagnantes
           const allWon = selections.every(
             (sel: any) => sel.matches && sel.choice === sel.matches.result
           );
@@ -256,7 +274,6 @@ Deno.serve(async (req: Request) => {
           let diamondsRewarded = 0;
 
           if (allWon) {
-            // Calculer les gains
             if (comboBet.bet_currency === 'diamonds') {
               diamondsRewarded = Math.floor(comboBet.amount * comboBet.total_odds);
             } else {
@@ -265,7 +282,6 @@ Deno.serve(async (req: Request) => {
               diamondsRewarded = Math.floor(profit * 0.01);
             }
 
-            // Récupérer le profil
             const profileResponse = await fetch(
               `${supabaseUrl}/rest/v1/profiles?select=tokens,diamonds,won_bets&id=eq.${comboBet.user_id}`,
               {
@@ -281,7 +297,6 @@ Deno.serve(async (req: Request) => {
               if (profiles && profiles.length > 0) {
                 const profile = profiles[0];
 
-                // Créditer les gains
                 await fetch(
                   `${supabaseUrl}/rest/v1/profiles?id=eq.${comboBet.user_id}`,
                   {
@@ -302,7 +317,6 @@ Deno.serve(async (req: Request) => {
             }
           }
 
-          // Mettre à jour le pari combiné
           await fetch(
             `${supabaseUrl}/rest/v1/combo_bets?id=eq.${comboBet.id}`,
             {

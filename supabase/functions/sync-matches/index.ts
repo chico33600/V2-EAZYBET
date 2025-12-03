@@ -35,7 +35,7 @@ interface Competition {
 
 const COMPETITIONS: Competition[] = [
   { sportKey: 'soccer_france_ligue_one', name: 'Ligue 1', emoji: '🇫🇷' },
-  { sportKey: 'soccer_epl', name: 'Premier League', emoji: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+  { sportKey: 'soccer_epl', name: 'Premier League', emoji: '🏴‍☠️' },
   { sportKey: 'soccer_spain_la_liga', name: 'La Liga', emoji: '🇪🇸' },
   { sportKey: 'soccer_italy_serie_a', name: 'Serie A', emoji: '🇮🇹' },
   { sportKey: 'soccer_germany_bundesliga', name: 'Bundesliga', emoji: '🇩🇪' },
@@ -205,7 +205,6 @@ Deno.serve(async (req: Request) => {
     console.log(`   - ❌ Errors: ${totalErrorCount}`);
     console.log('==========================================');
 
-    // Mise à jour des statuts des matchs
     const { error: statusUpdateError } = await supabase
       .from('matches')
       .update({ status: 'live' })
@@ -217,7 +216,6 @@ Deno.serve(async (req: Request) => {
       console.error('❌ [EDGE] Status update error:', statusUpdateError);
     }
 
-    // Suppression UNIQUEMENT des matchs futurs sans paris
     const { data: matchesToDelete } = await supabase
       .from('matches')
       .select('id')
@@ -243,6 +241,77 @@ Deno.serve(async (req: Request) => {
 
     console.log('✅ [EDGE] Match cleanup completed');
 
+    console.log('🎯 [EDGE] Synchronizing scores for finished matches...');
+    let scoresUpdated = 0;
+    let scoresErrors = 0;
+
+    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+
+    const { data: finishedMatches } = await supabase
+      .from('matches')
+      .select('id, external_api_id, api_provider, team_a, team_b, match_date')
+      .eq('match_mode', 'real')
+      .eq('status', 'finished')
+      .is('result', null)
+      .not('external_api_id', 'is', null)
+      .gte('match_date', twoDaysAgo.toISOString());
+
+    console.log(`📊 [EDGE] Found ${finishedMatches?.length || 0} finished matches without results`);
+
+    if (finishedMatches && finishedMatches.length > 0) {
+      for (const match of finishedMatches) {
+        try {
+          const scoresUrl = `https://api.the-odds-api.com/v4/sports/${match.api_provider === 'the-odds-api' ? 'soccer_' : ''}*/scores/?apiKey=${oddsApiKey}&daysFrom=3&eventIds=${match.external_api_id}`;
+
+          console.log(`🔍 [EDGE] Fetching score for match ${match.team_a} vs ${match.team_b}...`);
+
+          const scoresResponse = await fetch(scoresUrl);
+
+          if (scoresResponse.ok) {
+            const scoresData = await scoresResponse.json();
+
+            if (scoresData && scoresData.length > 0) {
+              const scoreData = scoresData[0];
+
+              if (scoreData.completed && scoreData.scores) {
+                const homeScore = scoreData.scores.find((s: any) => s.name === match.team_a);
+                const awayScore = scoreData.scores.find((s: any) => s.name === match.team_b);
+
+                if (homeScore && awayScore) {
+                  let result = null;
+                  if (homeScore.score > awayScore.score) {
+                    result = 'A';
+                  } else if (awayScore.score > homeScore.score) {
+                    result = 'B';
+                  } else {
+                    result = 'DRAW';
+                  }
+
+                  const { error: updateError } = await supabase
+                    .from('matches')
+                    .update({ result })
+                    .eq('id', match.id);
+
+                  if (updateError) {
+                    console.error(`❌ [EDGE] Failed to update result for match ${match.id}:`, updateError);
+                    scoresErrors++;
+                  } else {
+                    console.log(`✅ [EDGE] Updated result for ${match.team_a} vs ${match.team_b}: ${result}`);
+                    scoresUpdated++;
+                  }
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`❌ [EDGE] Error fetching score for match ${match.id}:`, err);
+          scoresErrors++;
+        }
+      }
+    }
+
+    console.log(`🎉 [EDGE] Scores sync complete - ${scoresUpdated} updated, ${scoresErrors} errors`);
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -253,6 +322,8 @@ Deno.serve(async (req: Request) => {
           updated: totalUpdatedCount,
           skipped: totalSkippedCount,
           errors: totalErrorCount,
+          scoresUpdated,
+          scoresErrors,
         },
       }),
       {
