@@ -245,68 +245,83 @@ Deno.serve(async (req: Request) => {
     let scoresUpdated = 0;
     let scoresErrors = 0;
 
-    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
-
     const { data: finishedMatches } = await supabase
       .from('matches')
-      .select('id, external_api_id, api_provider, team_a, team_b, match_date')
+      .select('id, external_api_id, team_a, team_b, match_date')
       .eq('match_mode', 'real')
       .eq('status', 'finished')
       .is('result', null)
-      .not('external_api_id', 'is', null)
-      .gte('match_date', twoDaysAgo.toISOString());
+      .not('external_api_id', 'is', null);
 
     console.log(`📊 [EDGE] Found ${finishedMatches?.length || 0} finished matches without results`);
 
-    if (finishedMatches && finishedMatches.length > 0) {
-      for (const match of finishedMatches) {
-        try {
-          const scoresUrl = `https://api.the-odds-api.com/v4/sports/${match.api_provider === 'the-odds-api' ? 'soccer_' : ''}*/scores/?apiKey=${oddsApiKey}&daysFrom=3&eventIds=${match.external_api_id}`;
+    for (const competition of COMPETITIONS) {
+      try {
+        const scoresUrl = `https://api.the-odds-api.com/v4/sports/${competition.sportKey}/scores/?apiKey=${oddsApiKey}&daysFrom=3`;
 
-          console.log(`🔍 [EDGE] Fetching score for match ${match.team_a} vs ${match.team_b}...`);
+        console.log(`🔍 [EDGE] Fetching scores for ${competition.name}...`);
 
-          const scoresResponse = await fetch(scoresUrl);
+        const scoresResponse = await fetch(scoresUrl);
 
-          if (scoresResponse.ok) {
-            const scoresData = await scoresResponse.json();
-
-            if (scoresData && scoresData.length > 0) {
-              const scoreData = scoresData[0];
-
-              if (scoreData.completed && scoreData.scores) {
-                const homeScore = scoreData.scores.find((s: any) => s.name === match.team_a);
-                const awayScore = scoreData.scores.find((s: any) => s.name === match.team_b);
-
-                if (homeScore && awayScore) {
-                  let result = null;
-                  if (homeScore.score > awayScore.score) {
-                    result = 'A';
-                  } else if (awayScore.score > homeScore.score) {
-                    result = 'B';
-                  } else {
-                    result = 'DRAW';
-                  }
-
-                  const { error: updateError } = await supabase
-                    .from('matches')
-                    .update({ result })
-                    .eq('id', match.id);
-
-                  if (updateError) {
-                    console.error(`❌ [EDGE] Failed to update result for match ${match.id}:`, updateError);
-                    scoresErrors++;
-                  } else {
-                    console.log(`✅ [EDGE] Updated result for ${match.team_a} vs ${match.team_b}: ${result}`);
-                    scoresUpdated++;
-                  }
-                }
-              }
-            }
-          }
-        } catch (err) {
-          console.error(`❌ [EDGE] Error fetching score for match ${match.id}:`, err);
-          scoresErrors++;
+        if (!scoresResponse.ok) {
+          console.error(`❌ [EDGE] Scores API error for ${competition.name}:`, scoresResponse.status);
+          continue;
         }
+
+        const scoresData = await scoresResponse.json();
+
+        if (!scoresData || scoresData.length === 0) {
+          continue;
+        }
+
+        for (const scoreData of scoresData) {
+          if (!scoreData.completed || !scoreData.scores) {
+            continue;
+          }
+
+          const matchInDb = finishedMatches?.find(m => m.external_api_id === scoreData.id);
+
+          if (!matchInDb) {
+            continue;
+          }
+
+          const homeScoreObj = scoreData.scores.find((s: any) => s.name === scoreData.home_team);
+          const awayScoreObj = scoreData.scores.find((s: any) => s.name === scoreData.away_team);
+
+          if (!homeScoreObj || !awayScoreObj) {
+            continue;
+          }
+
+          const scoreHome = parseInt(homeScoreObj.score);
+          const scoreAway = parseInt(awayScoreObj.score);
+
+          let result = 'DRAW';
+          if (scoreHome > scoreAway) {
+            result = 'A';
+          } else if (scoreAway > scoreHome) {
+            result = 'B';
+          }
+
+          const { error: updateError } = await supabase
+            .from('matches')
+            .update({
+              score_home: scoreHome,
+              score_away: scoreAway,
+              result,
+              status: 'finished'
+            })
+            .eq('id', matchInDb.id);
+
+          if (updateError) {
+            console.error(`❌ [EDGE] Failed to update result for match ${matchInDb.id}:`, updateError);
+            scoresErrors++;
+          } else {
+            console.log(`✅ [EDGE] Updated ${matchInDb.team_a} ${scoreHome}-${scoreAway} ${matchInDb.team_b}: ${result}`);
+            scoresUpdated++;
+          }        }
+      } catch (err) {
+        console.error(`❌ [EDGE] Error fetching scores for ${competition.name}:`, err);
+        scoresErrors++;
       }
     }
 
