@@ -57,19 +57,17 @@ Deno.serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const oddsApiKey = Deno.env.get('ODDS_API_KEY');
 
-    console.log('🔑 [EDGE] Fetching API key from system config...');
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { data: oddsApiKey, error: secretError } = await supabase
-      .rpc('get_system_config', { config_key: 'ODDS_API_KEY' });
-
-    if (secretError || !oddsApiKey) {
-      console.error('❌ [EDGE] Failed to get ODDS_API_KEY:', secretError);
+    console.log('🔑 [EDGE] Checking API key...');
+    if (!oddsApiKey) {
+      console.error('❌ [EDGE] ODDS_API_KEY not configured');
       throw new Error('ODDS_API_KEY not configured');
     }
 
     console.log('✅ [EDGE] API key found:', oddsApiKey.substring(0, 8) + '...');
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     let totalSyncedCount = 0;
     let totalUpdatedCount = 0;

@@ -175,12 +175,12 @@ export default function Home() {
     };
   }, [activeTab, setHasNewBet]);
 
-  // Mise à jour automatique toutes les 20 secondes
+  // Mise à jour automatique des statuts toutes les 30 secondes
   useEffect(() => {
     if (!user) return;
 
     const interval = setInterval(async () => {
-      console.log('[Home] Auto-updating...');
+      console.log('[Home] Auto-updating match statuses...');
       await updateMatchStatuses();
 
       // Recharger les données de l'onglet actif
@@ -190,11 +190,8 @@ export default function Home() {
       } else if (activeTab === 'upcoming') {
         const data = await fetchAvailableMatches('real');
         setMatches(data);
-      } else if (activeTab === 'finished') {
-        const data = await getUserBets('history');
-        setFinishedBets(data);
       }
-    }, 20000); // 20 secondes
+    }, 30000); // 30 secondes
 
     return () => clearInterval(interval);
   }, [user, activeTab]);
