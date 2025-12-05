@@ -15,7 +15,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    console.log("🎯 [RESOLVE-BETS] Starting bet resolution...");
+    console.log("🎯 [RESOLVE-BETS] Starting bet resolution (database-only mode)...");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -34,74 +34,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const now = new Date();
-    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-
-    console.log("🔄 [RESOLVE-BETS] Calling sync-matches to fetch scores...");
-    try {
-      const syncResponse = await fetch(
-        `${supabaseUrl}/functions/v1/sync-matches`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": supabaseAnonKey,
-            "Authorization": `Bearer ${supabaseAnonKey}`,
-          },
-        }
-      );
-
-      if (syncResponse.ok) {
-        const syncData = await syncResponse.json();
-        console.log(`✅ [RESOLVE-BETS] Sync complete - ${syncData.stats?.scoresUpdated || 0} scores updated`);
-      } else {
-        console.error("❌ [RESOLVE-BETS] Sync-matches failed:", syncResponse.status);
-      }
-    } catch (syncError) {
-      console.error("❌ [RESOLVE-BETS] Failed to call sync-matches:", syncError);
-    }
-
-    console.log("🔄 [RESOLVE-BETS] Updating match statuses...");
-
-    const updateStatusLiveResponse = await fetch(
-      `${supabaseUrl}/rest/v1/matches?match_mode=eq.real&status=eq.upcoming&match_date=lte.${now.toISOString()}&match_date=gte.${twoHoursAgo.toISOString()}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": supabaseAnonKey,
-          "Authorization": `Bearer ${supabaseAnonKey}`,
-          "Prefer": "return=representation",
-        },
-        body: JSON.stringify({ status: "live" }),
-      }
-    );
-
-    if (!updateStatusLiveResponse.ok) {
-      console.error("❌ [RESOLVE-BETS] Failed to update match status to live");
-    } else {
-      console.log("✅ [RESOLVE-BETS] Updated match statuses to live");
-    }
-
-    const updateStatusFinishedResponse = await fetch(
-      `${supabaseUrl}/rest/v1/matches?match_mode=eq.real&status=in.(upcoming,live)&match_date=lt.${twoHoursAgo.toISOString()}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": supabaseAnonKey,
-          "Authorization": `Bearer ${supabaseAnonKey}`,
-          "Prefer": "return=representation",
-        },
-        body: JSON.stringify({ status: "finished" }),
-      }
-    );
-
-    if (!updateStatusFinishedResponse.ok) {
-      console.error("❌ [RESOLVE-BETS] Failed to update match status to finished");
-    } else {
-      console.log("✅ [RESOLVE-BETS] Updated match statuses to finished");
-    }
+    console.log("🔍 [RESOLVE-BETS] Fetching finished matches with results...");
 
     const finishedMatchesResponse = await fetch(
       `${supabaseUrl}/rest/v1/matches?select=*&status=eq.finished&result=not.is.null`,

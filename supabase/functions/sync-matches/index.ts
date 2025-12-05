@@ -7,26 +7,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-interface OddsAPIMatch {
-  id: string;
-  sport_key: string;
-  sport_title: string;
-  commence_time: string;
-  home_team: string;
-  away_team: string;
-  bookmakers: Array<{
-    key: string;
-    title: string;
-    markets: Array<{
-      key: string;
-      outcomes: Array<{
-        name: string;
-        price: number;
-      }>;
-    }>;
-  }>;
-}
-
 interface Competition {
   sportKey: string;
   name: string;
@@ -53,235 +33,132 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    console.log('🌀 [EDGE] Starting match synchronization...');
+    console.log('🌀 [SYNC] Starting optimized match synchronization...');
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const oddsApiKey = Deno.env.get('ODDS_API_KEY');
 
-    console.log('🔑 [EDGE] Checking API key...');
+    console.log('🔑 [SYNC] Checking API key...');
     if (!oddsApiKey) {
-      console.error('❌ [EDGE] ODDS_API_KEY not configured');
+      console.error('❌ [SYNC] ODDS_API_KEY not configured');
       throw new Error('ODDS_API_KEY not configured');
     }
 
-    console.log('✅ [EDGE] API key found:', oddsApiKey.substring(0, 8) + '...');
+    console.log('✅ [SYNC] API key found:', oddsApiKey.substring(0, 8) + '...');
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    let totalSyncedCount = 0;
-    let totalUpdatedCount = 0;
-    let totalErrorCount = 0;
-    let totalSkippedCount = 0;
-
     const now = new Date();
-    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    console.log(`📅 [EDGE] Date range: ${now.toISOString()} to ${sevenDaysFromNow.toISOString()}`);
+    console.log('📊 [SYNC] Step 1: Update match statuses based on time');
 
-    for (const competition of COMPETITIONS) {
-      try {
-        const apiUrl = `https://api.the-odds-api.com/v4/sports/${competition.sportKey}/odds/?regions=eu&markets=h2h&apiKey=${oddsApiKey}`;
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
 
-        console.log(`🏆 [EDGE] Fetching ${competition.name}...`);
-
-        const response = await fetch(apiUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          },
-        });
-
-        console.log(`📡 [EDGE] ${competition.name} response status:`, response.status);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`❌ [EDGE] Odds API error for ${competition.name}:`, response.status, errorText.substring(0, 200));
-          totalErrorCount++;
-          continue;
-        }
-
-        const matches: OddsAPIMatch[] = await response.json();
-        console.log(`✅ [EDGE] ${competition.name}: ${matches.length} matches found in API`);
-
-        for (const match of matches) {
-          try {
-            const commenceTime = new Date(match.commence_time);
-
-            if (commenceTime <= now) {
-              totalSkippedCount++;
-              continue;
-            }
-
-            if (commenceTime > sevenDaysFromNow) {
-              totalSkippedCount++;
-              continue;
-            }
-
-            let oddsA = 2.0;
-            let oddsDraw = 3.0;
-            let oddsB = 2.5;
-
-            if (match.bookmakers && match.bookmakers.length > 0) {
-              const bookmaker = match.bookmakers[0];
-              const h2hMarket = bookmaker.markets.find(m => m.key === 'h2h');
-
-              if (h2hMarket && h2hMarket.outcomes) {
-                const homeOutcome = h2hMarket.outcomes.find(o => o.name === match.home_team);
-                const awayOutcome = h2hMarket.outcomes.find(o => o.name === match.away_team);
-                const drawOutcome = h2hMarket.outcomes.find(o => o.name === 'Draw');
-
-                if (homeOutcome) oddsA = homeOutcome.price;
-                if (awayOutcome) oddsB = awayOutcome.price;
-                if (drawOutcome) oddsDraw = drawOutcome.price;
-              }
-            }
-
-            const { data: existingMatch } = await supabase
-              .from('matches')
-              .select('id')
-              .eq('external_api_id', match.id)
-              .eq('api_provider', 'the-odds-api')
-              .maybeSingle();
-
-            if (existingMatch) {
-              const { error: updateError } = await supabase
-                .from('matches')
-                .update({
-                  odds_a: oddsA,
-                  odds_draw: oddsDraw,
-                  odds_b: oddsB,
-                  match_date: commenceTime.toISOString(),
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', existingMatch.id);
-
-              if (updateError) {
-                console.error('❌ [EDGE] Update error:', updateError);
-                totalErrorCount++;
-              } else {
-                totalUpdatedCount++;
-              }
-            } else {
-              const { error: insertError } = await supabase
-                .from('matches')
-                .insert({
-                  team_a: match.home_team,
-                  team_b: match.away_team,
-                  competition: competition.name,
-                  odds_a: oddsA,
-                  odds_draw: oddsDraw,
-                  odds_b: oddsB,
-                  status: 'upcoming',
-                  match_date: commenceTime.toISOString(),
-                  match_mode: 'real',
-                  external_api_id: match.id,
-                  api_provider: 'the-odds-api',
-                });
-
-              if (insertError) {
-                console.error('❌ [EDGE] Insert error:', insertError);
-                totalErrorCount++;
-              } else {
-                totalSyncedCount++;
-              }
-            }
-          } catch (err) {
-            console.error('❌ [EDGE] Error processing match:', err);
-            totalErrorCount++;
-          }
-        }
-      } catch (err) {
-        console.error(`❌ [EDGE] Error fetching ${competition.name}:`, err instanceof Error ? err.message : err);
-        totalErrorCount++;
-      }
-    }
-
-    console.log('🎉 [EDGE] ========== SYNC COMPLETE ==========');
-    console.log(`📊 [EDGE] Stats:`);
-    console.log(`   - ✨ New matches: ${totalSyncedCount}`);
-    console.log(`   - 🔄 Updated: ${totalUpdatedCount}`);
-    console.log(`   - ⏭️ Skipped: ${totalSkippedCount}`);
-    console.log(`   - ❌ Errors: ${totalErrorCount}`);
-    console.log('==========================================');
-
-    const { error: statusUpdateError } = await supabase
+    await supabase
       .from('matches')
       .update({ status: 'live' })
       .eq('match_mode', 'real')
       .eq('status', 'upcoming')
-      .lte('match_date', now.toISOString());
+      .lte('match_date', now.toISOString())
+      .gte('match_date', twoHoursAgo.toISOString());
 
-    if (statusUpdateError) {
-      console.error('❌ [EDGE] Status update error:', statusUpdateError);
-    }
-
-    const { data: matchesToDelete } = await supabase
+    await supabase
       .from('matches')
-      .select('id')
+      .update({ status: 'finished' })
       .eq('match_mode', 'real')
-      .gt('match_date', sevenDaysFromNow.toISOString());
+      .in('status', ['upcoming', 'live'])
+      .lt('match_date', twoHoursAgo.toISOString());
 
-    if (matchesToDelete && matchesToDelete.length > 0) {
-      for (const match of matchesToDelete) {
-        const { data: bets } = await supabase
-          .from('bets')
-          .select('id')
-          .eq('match_id', match.id)
-          .limit(1);
+    console.log('✅ [SYNC] Match statuses updated');
 
-        if (!bets || bets.length === 0) {
-          await supabase
-            .from('matches')
-            .delete()
-            .eq('id', match.id);
-        }
-      }
-    }
+    console.log('🎯 [SYNC] Step 2: Check for finished matches without results');
 
-    console.log('✅ [EDGE] Match cleanup completed');
-
-    console.log('🎯 [EDGE] Synchronizing scores for finished matches...');
-    let scoresUpdated = 0;
-    let scoresErrors = 0;
-
-    const { data: finishedMatches } = await supabase
+    const { data: finishedMatches, error: fetchError } = await supabase
       .from('matches')
-      .select('id, external_api_id, team_a, team_b, match_date')
+      .select('id, external_api_id, competition, team_a, team_b')
       .eq('match_mode', 'real')
       .eq('status', 'finished')
       .is('result', null)
       .not('external_api_id', 'is', null);
 
-    console.log(`📊 [EDGE] Found ${finishedMatches?.length || 0} finished matches without results`);
+    if (fetchError) {
+      console.error('❌ [SYNC] Error fetching finished matches:', fetchError);
+      throw fetchError;
+    }
 
-    for (const competition of COMPETITIONS) {
+    if (!finishedMatches || finishedMatches.length === 0) {
+      console.log('✅ [SYNC] No finished matches without results, skipping API calls');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'No matches to update',
+          stats: {
+            scoresUpdated: 0,
+            scoresErrors: 0,
+            apiCallsMade: 0,
+          },
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    }
+
+    console.log(`📊 [SYNC] Found ${finishedMatches.length} matches needing scores`);
+
+    const leaguesNeeded = Array.from(
+      new Set(finishedMatches.map(m => m.competition).filter(Boolean))
+    );
+
+    console.log(`🏆 [SYNC] Leagues to fetch: ${leaguesNeeded.join(', ')}`);
+
+    let scoresUpdated = 0;
+    let scoresErrors = 0;
+    let apiCallsMade = 0;
+
+    for (const leagueName of leaguesNeeded) {
+      const competition = COMPETITIONS.find(c => c.name === leagueName);
+      if (!competition) {
+        console.log(`⚠️ [SYNC] No sport key found for league: ${leagueName}`);
+        continue;
+      }
+
       try {
         const scoresUrl = `https://api.the-odds-api.com/v4/sports/${competition.sportKey}/scores/?apiKey=${oddsApiKey}&daysFrom=3`;
 
-        console.log(`🔍 [EDGE] Fetching scores for ${competition.name}...`);
+        console.log(`🔍 [SYNC] Fetching scores for ${competition.name}...`);
+        apiCallsMade++;
 
         const scoresResponse = await fetch(scoresUrl);
 
         if (!scoresResponse.ok) {
-          console.error(`❌ [EDGE] Scores API error for ${competition.name}:`, scoresResponse.status);
+          console.error(`❌ [SYNC] Scores API error for ${competition.name}:`, scoresResponse.status);
+          scoresErrors++;
           continue;
         }
 
         const scoresData = await scoresResponse.json();
 
         if (!scoresData || scoresData.length === 0) {
+          console.log(`📭 [SYNC] No scores data for ${competition.name}`);
           continue;
         }
 
-        for (const scoreData of scoresData) {
-          if (!scoreData.completed || !scoreData.scores) {
+        const matchesForThisLeague = finishedMatches.filter(m => m.competition === leagueName);
+
+        for (const matchInDb of matchesForThisLeague) {
+          const scoreData = scoresData.find((s: any) => s.id === matchInDb.external_api_id);
+
+          if (!scoreData) {
             continue;
           }
 
-          const matchInDb = finishedMatches?.find(m => m.external_api_id === scoreData.id);
-
-          if (!matchInDb) {
+          if (!scoreData.completed || !scoreData.scores) {
+            console.log(`⏳ [SYNC] Match ${matchInDb.external_api_id} not completed yet`);
             continue;
           }
 
@@ -289,17 +166,30 @@ Deno.serve(async (req: Request) => {
           const awayScoreObj = scoreData.scores.find((s: any) => s.name === scoreData.away_team);
 
           if (!homeScoreObj || !awayScoreObj) {
+            console.error(`❌ [SYNC] Could not find scores for ${scoreData.home_team} vs ${scoreData.away_team}`);
+            scoresErrors++;
             continue;
           }
 
-          const scoreHome = parseInt(homeScoreObj.score);
-          const scoreAway = parseInt(awayScoreObj.score);
+          const apiHomeScore = parseInt(homeScoreObj.score);
+          const apiAwayScore = parseInt(awayScoreObj.score);
 
-          let result = 'DRAW';
+          let scoreHome, scoreAway, result;
+
+          if (matchInDb.team_a === scoreData.home_team) {
+            scoreHome = apiHomeScore;
+            scoreAway = apiAwayScore;
+          } else {
+            scoreHome = apiAwayScore;
+            scoreAway = apiHomeScore;
+          }
+
           if (scoreHome > scoreAway) {
             result = 'A';
           } else if (scoreAway > scoreHome) {
             result = 'B';
+          } else {
+            result = 'Draw';
           }
 
           const { error: updateError } = await supabase
@@ -313,32 +203,29 @@ Deno.serve(async (req: Request) => {
             .eq('id', matchInDb.id);
 
           if (updateError) {
-            console.error(`❌ [EDGE] Failed to update result for match ${matchInDb.id}:`, updateError);
+            console.error(`❌ [SYNC] Failed to update match ${matchInDb.id}:`, updateError);
             scoresErrors++;
           } else {
-            console.log(`✅ [EDGE] Updated ${matchInDb.team_a} ${scoreHome}-${scoreAway} ${matchInDb.team_b}: ${result}`);
+            console.log(`✅ [SYNC] Updated ${matchInDb.team_a} ${scoreHome}-${scoreAway} ${matchInDb.team_b}: ${result}`);
             scoresUpdated++;
-          }        }
+          }
+        }
       } catch (err) {
-        console.error(`❌ [EDGE] Error fetching scores for ${competition.name}:`, err);
+        console.error(`❌ [SYNC] Error fetching scores for ${competition.name}:`, err);
         scoresErrors++;
       }
     }
 
-    console.log(`🎉 [EDGE] Scores sync complete - ${scoresUpdated} updated, ${scoresErrors} errors`);
+    console.log(`🎉 [SYNC] Complete - ${scoresUpdated} scores updated, ${apiCallsMade} API calls made`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'All competitions synchronized successfully',
+        message: 'Match synchronization complete',
         stats: {
-          competitions: COMPETITIONS.length,
-          synced: totalSyncedCount,
-          updated: totalUpdatedCount,
-          skipped: totalSkippedCount,
-          errors: totalErrorCount,
           scoresUpdated,
           scoresErrors,
+          apiCallsMade,
         },
       }),
       {
@@ -349,7 +236,7 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error) {
-    console.error('❌ [EDGE] Fatal sync error:', error);
+    console.error('❌ [SYNC] Fatal sync error:', error);
     return new Response(
       JSON.stringify({
         success: false,
