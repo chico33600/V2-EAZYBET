@@ -15,6 +15,7 @@ import { ActiveComboBetCard } from '@/components/active-combo-bet-card';
 import { FinishedComboBetCard } from '@/components/finished-combo-bet-card';
 import { TutorialModal } from '@/components/tutorial-modal';
 import { PromoBanner } from '@/components/promo-banner';
+import { SplashScreen } from '@/components/splash-screen';
 import { supabase } from '@/lib/supabase-client';
 
 export default function Home() {
@@ -22,6 +23,7 @@ export default function Home() {
   const { hasNewBet, setHasNewBet } = useBadgeStore();
   const { showTutorial, setShowTutorial } = useTutorialStore();
   const [mounted, setMounted] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const [matches, setMatches] = useState<Match[]>([]);
   const [activeBets, setActiveBets] = useState<any[]>([]);
   const [finishedBets, setFinishedBets] = useState<any[]>([]);
@@ -196,14 +198,8 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [user, activeTab]);
 
-  if (!mounted || authLoading) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <div className="px-4">
-          <TabsMatchs activeTab={activeTab} onTabChange={setActiveTab} />
-        </div>
-      </div>
-    );
+  if (showSplash || !mounted || authLoading) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
   if (!user) {
