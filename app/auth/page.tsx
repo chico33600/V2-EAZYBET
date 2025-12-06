@@ -173,7 +173,7 @@ export default function AuthPage() {
               onClick={() => setMode('login')}
               className={`flex-1 py-3 rounded-lg font-bold transition-all ${
                 mode === 'login'
-                  ? 'bg-[#C1322B] text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-[#C1322B] via-[#8A2BE2] to-[#007BFF] text-white shadow-lg'
                   : 'bg-[#30363D] text-white/60 hover:text-white'
               }`}
             >
@@ -183,7 +183,7 @@ export default function AuthPage() {
               onClick={() => setMode('signup')}
               className={`flex-1 py-3 rounded-lg font-bold transition-all ${
                 mode === 'signup'
-                  ? 'bg-[#C1322B] text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-[#C1322B] via-[#8A2BE2] to-[#007BFF] text-white shadow-lg'
                   : 'bg-[#30363D] text-white/60 hover:text-white'
               }`}
             >
