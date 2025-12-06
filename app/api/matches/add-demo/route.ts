@@ -14,7 +14,7 @@ const DEMO_MATCHES = [
     odds_a: 1.85,
     odds_draw: 3.40,
     odds_b: 4.20,
-    hours_from_now: 24
+    minutes_from_now: 1
   },
   {
     team_a: 'Lyon',
@@ -23,7 +23,7 @@ const DEMO_MATCHES = [
     odds_a: 2.30,
     odds_draw: 3.20,
     odds_b: 3.10,
-    hours_from_now: 48
+    minutes_from_now: 2
   },
   {
     team_a: 'Manchester United',
@@ -32,7 +32,7 @@ const DEMO_MATCHES = [
     odds_a: 3.10,
     odds_draw: 3.40,
     odds_b: 2.20,
-    hours_from_now: 36
+    minutes_from_now: 3
   },
   {
     team_a: 'Arsenal',
@@ -41,7 +41,7 @@ const DEMO_MATCHES = [
     odds_a: 2.00,
     odds_draw: 3.50,
     odds_b: 3.60,
-    hours_from_now: 60
+    minutes_from_now: 4
   },
   {
     team_a: 'Manchester City',
@@ -50,7 +50,7 @@ const DEMO_MATCHES = [
     odds_a: 1.60,
     odds_draw: 4.00,
     odds_b: 5.50,
-    hours_from_now: 72
+    minutes_from_now: 5
   },
   {
     team_a: 'Real Madrid',
@@ -59,7 +59,7 @@ const DEMO_MATCHES = [
     odds_a: 2.10,
     odds_draw: 3.30,
     odds_b: 3.40,
-    hours_from_now: 96
+    minutes_from_now: 6
   },
   {
     team_a: 'Atletico Madrid',
@@ -68,7 +68,7 @@ const DEMO_MATCHES = [
     odds_a: 1.90,
     odds_draw: 3.40,
     odds_b: 4.10,
-    hours_from_now: 120
+    minutes_from_now: 7
   },
   {
     team_a: 'Inter',
@@ -77,7 +77,7 @@ const DEMO_MATCHES = [
     odds_a: 2.20,
     odds_draw: 3.20,
     odds_b: 3.30,
-    hours_from_now: 108
+    minutes_from_now: 8
   },
   {
     team_a: 'Juventus',
@@ -86,7 +86,7 @@ const DEMO_MATCHES = [
     odds_a: 2.40,
     odds_draw: 3.10,
     odds_b: 3.00,
-    hours_from_now: 84
+    minutes_from_now: 9
   },
   {
     team_a: 'Bayern',
@@ -95,7 +95,7 @@ const DEMO_MATCHES = [
     odds_a: 1.70,
     odds_draw: 3.80,
     odds_b: 4.80,
-    hours_from_now: 132
+    minutes_from_now: 10
   },
   {
     team_a: 'Leverkusen',
@@ -104,7 +104,7 @@ const DEMO_MATCHES = [
     odds_a: 2.10,
     odds_draw: 3.30,
     odds_b: 3.50,
-    hours_from_now: 144
+    minutes_from_now: 11
   },
   {
     team_a: 'Nice',
@@ -113,7 +113,7 @@ const DEMO_MATCHES = [
     odds_a: 2.50,
     odds_draw: 3.10,
     odds_b: 2.90,
-    hours_from_now: 156
+    minutes_from_now: 12
   },
 ];
 
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
       const teamBImages = getTeamImages(match.team_b);
 
       const matchDate = new Date();
-      matchDate.setHours(matchDate.getHours() + match.hours_from_now);
+      matchDate.setMinutes(matchDate.getMinutes() + match.minutes_from_now);
 
       const { error } = await supabase
         .from('matches')
