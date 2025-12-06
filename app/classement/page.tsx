@@ -1,11 +1,37 @@
 'use client';
 
-import { useState } from 'react';
-import { Trophy, Users, Globe } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trophy, Users, Globe, Bell } from 'lucide-react';
 import { LeaderboardList } from '@/components/leaderboard-list';
+import { FriendRequestsModal } from '@/components/friend-requests-modal';
+import { useAuth } from '@/lib/auth-context';
 
 export default function ClassementPage() {
   const [viewMode, setViewMode] = useState<'global' | 'friends'>('global');
+  const [showRequestsModal, setShowRequestsModal] = useState(false);
+  const [requestsCount, setRequestsCount] = useState(0);
+  const { profile } = useAuth();
+
+  async function loadRequestsCount() {
+    if (!profile?.id) return;
+
+    try {
+      const response = await fetch(`/api/friends/requests?userId=${profile.id}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setRequestsCount(data.data.count || 0);
+      }
+    } catch (error) {
+      console.error('Error loading requests count:', error);
+    }
+  }
+
+  useEffect(() => {
+    loadRequestsCount();
+    const interval = setInterval(loadRequestsCount, 30000);
+    return () => clearInterval(interval);
+  }, [profile?.id]);
 
   return (
     <div className="max-w-2xl mx-auto p-4 pb-24">
@@ -17,6 +43,17 @@ export default function ClassementPage() {
           <h1 className="text-2xl font-bold text-white">Classement</h1>
           <p className="text-sm text-white/50">Top joueurs par diamants</p>
         </div>
+        {requestsCount > 0 && (
+          <button
+            onClick={() => setShowRequestsModal(true)}
+            className="relative p-3 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 transition-colors"
+          >
+            <Bell className="w-6 h-6 text-purple-400" />
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+              {requestsCount}
+            </span>
+          </button>
+        )}
       </div>
 
       <div className="flex gap-2 mb-6">
@@ -33,7 +70,7 @@ export default function ClassementPage() {
         </button>
         <button
           onClick={() => setViewMode('friends')}
-          className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+          className={`relative flex-1 py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
             viewMode === 'friends'
               ? 'bg-gradient-to-r from-[#C1322B] to-[#8A2BE2] text-white'
               : 'bg-slate-800/50 text-slate-400 hover:text-white'
@@ -41,6 +78,11 @@ export default function ClassementPage() {
         >
           <Users className="w-4 h-4" />
           Amis
+          {requestsCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+              {requestsCount}
+            </span>
+          )}
         </button>
       </div>
 
@@ -58,6 +100,14 @@ export default function ClassementPage() {
           </div>
         </div>
       </div>
+
+      <FriendRequestsModal
+        isOpen={showRequestsModal}
+        onClose={() => setShowRequestsModal(false)}
+        onRequestsChange={() => {
+          loadRequestsCount();
+        }}
+      />
     </div>
   );
 }

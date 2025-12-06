@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Trophy, Medal, Award, Crown } from 'lucide-react';
+import { User, Trophy, Medal, Award, Crown, UserPlus, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/auth-context';
+import { toast } from 'sonner';
 
 interface LeaderboardEntry {
   rank: number;
@@ -33,6 +34,7 @@ export function LeaderboardList({ viewMode = 'global' }: LeaderboardListProps) {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
+  const [friendRequestsSent, setFriendRequestsSent] = useState<Set<string>>(new Set());
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const { profile } = useAuth();
@@ -177,6 +179,33 @@ export function LeaderboardList({ viewMode = 'global' }: LeaderboardListProps) {
     }
   }
 
+  async function sendFriendRequest(targetUserId: string) {
+    if (!profile?.id) return;
+
+    try {
+      const response = await fetch('/api/friends', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: profile.id,
+          targetUserId
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setFriendRequestsSent(prev => new Set(prev).add(targetUserId));
+        toast.success('Demande d\'ami envoyée');
+      } else {
+        toast.error(data.error || 'Erreur lors de l\'envoi');
+      }
+    } catch (error) {
+      console.error('Error sending friend request:', error);
+      toast.error('Erreur lors de l\'envoi');
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -240,9 +269,9 @@ export function LeaderboardList({ viewMode = 'global' }: LeaderboardListProps) {
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
                 )}
 
-                <div className="relative flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center justify-center w-10">
+                <div className="relative flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="flex items-center justify-center w-10 flex-shrink-0">
                       {entry.rank <= 3 ? (
                         getRankIcon(entry.rank)
                       ) : (
@@ -252,23 +281,44 @@ export function LeaderboardList({ viewMode = 'global' }: LeaderboardListProps) {
                       )}
                     </div>
 
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border-2 border-slate-600">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border-2 border-slate-600 flex-shrink-0">
                       <User className={`w-5 h-5 ${isCurrentUser ? 'text-purple-400' : 'text-slate-400'}`} />
                     </div>
 
-                    <div>
-                      <p className={`font-bold ${isTopThree ? 'text-white text-lg' : isCurrentUser ? 'text-purple-300' : 'text-slate-200'}`}>
+                    <div className="min-w-0 flex-1">
+                      <p className={`font-bold truncate ${isTopThree ? 'text-white text-lg' : isCurrentUser ? 'text-purple-300' : 'text-slate-200'}`}>
                         {entry.username}
                         {isCurrentUser && <span className="ml-2 text-xs text-purple-400">(Vous)</span>}
                       </p>
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <p className={`text-2xl font-black ${isTopThree ? 'text-white' : isCurrentUser ? 'text-purple-300' : 'text-slate-300'}`}>
-                      {entry.score.toLocaleString()}
-                    </p>
-                    <p className="text-yellow-400 text-xs font-semibold">💎 Diamants</p>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="text-right">
+                      <p className={`text-2xl font-black ${isTopThree ? 'text-white' : isCurrentUser ? 'text-purple-300' : 'text-slate-300'}`}>
+                        {entry.score.toLocaleString()}
+                      </p>
+                      <p className="text-yellow-400 text-xs font-semibold">💎 Diamants</p>
+                    </div>
+
+                    {viewMode === 'global' && !isCurrentUser && profile?.id && (
+                      <button
+                        onClick={() => sendFriendRequest(entry.user_id)}
+                        disabled={friendRequestsSent.has(entry.user_id)}
+                        className={`p-2 rounded-lg transition-all ${
+                          friendRequestsSent.has(entry.user_id)
+                            ? 'bg-green-500/20 text-green-400 cursor-not-allowed'
+                            : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-400'
+                        }`}
+                        title={friendRequestsSent.has(entry.user_id) ? 'Demande envoyée' : 'Ajouter en ami'}
+                      >
+                        {friendRequestsSent.has(entry.user_id) ? (
+                          <Check className="w-5 h-5" />
+                        ) : (
+                          <UserPlus className="w-5 h-5" />
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -296,7 +346,12 @@ export function LeaderboardList({ viewMode = 'global' }: LeaderboardListProps) {
         {entries.length === 0 && !loading && (
           <div className="text-center py-20 text-slate-500">
             <Trophy className="w-16 h-16 mx-auto mb-4 text-slate-600" />
-            {userRank ? (
+            {viewMode === 'friends' ? (
+              <div>
+                <p className="mb-2">Tu n'as pas encore d'amis sur Eazybet</p>
+                <p className="text-sm">Ajoute-en depuis le classement global ou via ton parrainage</p>
+              </div>
+            ) : userRank ? (
               <div>
                 <p className="mb-2">Vous êtes le seul joueur inscrit !</p>
                 <p className="text-sm">Invitez vos amis pour commencer à jouer</p>
