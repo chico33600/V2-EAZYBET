@@ -101,8 +101,7 @@ export function LeaderboardList({ viewMode = 'global' }: LeaderboardListProps) {
     if (!profile?.id) return;
 
     try {
-      const friendsParam = viewMode === 'friends' ? `&friendsOnly=true` : '';
-      const response = await fetch(`/api/leaderboard?userId=${profile.id}${friendsParam}`);
+      const response = await fetch(`/api/leaderboard?userId=${profile.id}`);
       const data = await response.json();
 
       if (data.success && data.data.user_rank) {
@@ -116,10 +115,14 @@ export function LeaderboardList({ viewMode = 'global' }: LeaderboardListProps) {
   useEffect(() => {
     console.log('LeaderboardList mounted, profile:', profile);
     loadLeaderboard();
+  }, [viewMode]);
+
+  useEffect(() => {
     if (profile?.id) {
+      console.log('Loading user rank for:', profile.id);
       loadUserRank();
     }
-  }, [viewMode]);
+  }, [profile?.id]);
 
   useEffect(() => {
     console.log('Entries state changed:', entries, 'Length:', entries.length);
