@@ -86,15 +86,22 @@ export async function GET(request: NextRequest) {
 
     console.log('[Leaderboard API] Processed leaderboard entries:', leaderboard.length);
 
-    const { count, error: countError } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true });
+    let total = leaderboard.length;
 
-    console.log('[Leaderboard API] Total count:', count, 'Error:', countError);
+    if (!friendsOnly) {
+      const { count, error: countError } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      console.log('[Leaderboard API] Total count:', count, 'Error:', countError);
+      total = count || leaderboard.length;
+    } else {
+      console.log('[Leaderboard API] Friends mode - total equals leaderboard length');
+    }
 
     const response = {
       leaderboard,
-      total: count || leaderboard.length,
+      total,
       offset,
       limit,
     };
