@@ -68,13 +68,16 @@ export async function GET(request: NextRequest) {
 
     console.log('[Leaderboard API] RPC result:', {
       dataLength: leaderboardData?.length,
-      error: error ? JSON.stringify(error) : null
+      error: error ? JSON.stringify(error) : null,
+      firstEntry: leaderboardData?.[0]
     });
 
     if (error) {
       console.error('[Leaderboard API] Leaderboard fetch error:', error);
       return createErrorResponse(`Failed to fetch leaderboard: ${error.message || JSON.stringify(error)}`, 500);
     }
+
+    console.log('[Leaderboard API] Raw data before mapping:', JSON.stringify(leaderboardData, null, 2));
 
     const leaderboard = (leaderboardData || []).map((player: any) => ({
       rank: Number(player.rank),
@@ -83,6 +86,8 @@ export async function GET(request: NextRequest) {
       avatar_url: player.avatar_url,
       score: Number(player.leaderboard_score),
     }));
+
+    console.log('[Leaderboard API] Mapped leaderboard:', JSON.stringify(leaderboard.slice(0, 3), null, 2));
 
     console.log('[Leaderboard API] Processed leaderboard entries:', leaderboard.length);
 
