@@ -35,6 +35,14 @@ interface FriendRequest {
   created_at: string;
 }
 
+interface SentRequest {
+  friendship_id: string;
+  receiver_id: string;
+  username: string;
+  leaderboard_score: number;
+  created_at: string;
+}
+
 interface FriendsModalProps {
   open: boolean;
   onClose: () => void;
@@ -45,6 +53,7 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [referralLink, setReferralLink] = useState('');
   const [referralCount, setReferralCount] = useState(0);
@@ -57,6 +66,7 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
       loadFriends();
       loadReferralData();
       loadFriendRequests();
+      loadSentRequests();
     }
   }, [open, profile?.id]);
 
@@ -170,6 +180,41 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
     }
   }
 
+  async function loadSentRequests() {
+    if (!profile?.id) return;
+
+    try {
+      const { data: requests, error } = await supabase
+        .from('friendships')
+        .select(`
+          id,
+          friend_id,
+          created_at,
+          receiver:profiles!friendships_friend_id_fkey(id, username, leaderboard_score)
+        `)
+        .eq('user_id', profile.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading sent requests:', error);
+        return;
+      }
+
+      const formattedRequests = (requests || []).map((req: any) => ({
+        friendship_id: req.id,
+        receiver_id: req.friend_id,
+        username: req.receiver.username,
+        leaderboard_score: req.receiver.leaderboard_score,
+        created_at: req.created_at
+      }));
+
+      setSentRequests(formattedRequests);
+    } catch (error) {
+      console.error('Error loading sent requests:', error);
+    }
+  }
+
   async function searchUsers() {
     if (!profile?.id || !searchQuery.trim()) return;
 
@@ -266,6 +311,7 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
           user.user_id === friendId ? { ...user, friendship_status: 'pending_sent' } : user
         )
       );
+      loadSentRequests();
     } catch (error) {
       console.error('Error adding friend:', error);
     }
@@ -301,6 +347,7 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
       }
 
       loadFriendRequests();
+      loadSentRequests();
       loadFriends();
       if (searchQuery) {
         searchUsers();
@@ -361,53 +408,12 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="friends" className="mt-4 space-y-3">
-            {friends.length === 0 ? (
-              <div className="text-center py-12">
-                <User className="w-16 h-16 mx-auto mb-4 text-slate-600" />
-                <p className="text-slate-400 mb-2">Aucun ami pour le moment</p>
-                <p className="text-sm text-slate-500">Cherchez des utilisateurs pour les ajouter</p>
-              </div>
-            ) : (
-              <AnimatePresence>
-                {friends.map((friend, index) => (
-                  <motion.div
-                    key={friend.friend_id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="flex items-center justify-between p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 hover:border-slate-600/50 transition-all"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#C1322B] to-[#8A2BE2] flex items-center justify-center">
-                        <User className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-white">{friend.username}</p>
-                        <p className="text-sm text-yellow-400">{friend.leaderboard_score.toLocaleString()} 💎</p>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => removeFriend(friend.friend_id)}
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            )}
-          </TabsContent>
-
-          <TabsContent value="search" className="mt-4 space-y-4">
+          <TabsContent value="friends" className="mt-4 space-y-4">
             {friendRequests.length > 0 && (
-              <div className="space-y-3 mb-4">
+              <div className="space-y-3 mb-6">
                 <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Demandes d'amis ({friendRequests.length})
+                  <UserPlus className="w-4 h-4" />
+                  Demandes d'amis reçues ({friendRequests.length})
                 </h3>
                 <AnimatePresence>
                   {friendRequests.map((request, index) => (
@@ -452,6 +458,53 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
               </div>
             )}
 
+            {friends.length === 0 && friendRequests.length === 0 ? (
+              <div className="text-center py-12">
+                <User className="w-16 h-16 mx-auto mb-4 text-slate-600" />
+                <p className="text-slate-400 mb-2">Aucun ami pour le moment</p>
+                <p className="text-sm text-slate-500">Cherchez des utilisateurs pour les ajouter</p>
+              </div>
+            ) : friends.length > 0 ? (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Mes amis ({friends.length})
+                </h3>
+                <AnimatePresence>
+                  {friends.map((friend, index) => (
+                    <motion.div
+                      key={friend.friend_id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="flex items-center justify-between p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 hover:border-slate-600/50 transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#C1322B] to-[#8A2BE2] flex items-center justify-center">
+                          <User className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-white">{friend.username}</p>
+                          <p className="text-sm text-yellow-400">{friend.leaderboard_score.toLocaleString()} 💎</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => removeFriend(friend.friend_id)}
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            ) : null}
+          </TabsContent>
+
+          <TabsContent value="search" className="mt-4 space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
               <Input
@@ -461,6 +514,41 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
                 className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
               />
             </div>
+
+            {sentRequests.length > 0 && (
+              <div className="space-y-3 mb-4">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Demandes envoyées ({sentRequests.length})
+                </h3>
+                <AnimatePresence>
+                  {sentRequests.map((request, index) => (
+                    <motion.div
+                      key={request.friendship_id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border border-yellow-500/30"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
+                          <User className="w-6 h-6 text-slate-400" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-white">{request.username}</p>
+                          <p className="text-sm text-yellow-400">{request.leaderboard_score.toLocaleString()} 💎</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-yellow-400 text-sm">
+                        <User className="w-4 h-4" />
+                        En attente
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
 
             <div className="space-y-3 max-h-[400px] overflow-y-auto">
               {loading ? (
