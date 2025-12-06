@@ -18,10 +18,12 @@ export async function GET(request: NextRequest) {
 
     console.log('[Leaderboard API] Params:', { limit, offset, userId, friendsOnly });
 
-    if (userId && !friendsOnly) {
-      console.log('[Leaderboard API] Fetching user rank for:', userId);
+    if (userId && searchParams.has('userId') && !searchParams.has('limit')) {
+      console.log('[Leaderboard API] Fetching user rank for:', userId, 'friendsOnly:', friendsOnly);
+
+      const rpcFunction = friendsOnly ? 'get_user_friends_rank' : 'get_user_rank';
       const { data: userRank, error: rankError } = await supabase
-        .rpc('get_user_rank', { user_id_input: userId });
+        .rpc(rpcFunction, { user_id_input: userId });
 
       if (rankError) {
         console.error('User rank fetch error:', rankError);
