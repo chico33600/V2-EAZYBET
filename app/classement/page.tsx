@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trophy, Users, Globe, Bell } from 'lucide-react';
+import { Trophy, Users, Globe, Bell, UserPlus } from 'lucide-react';
 import { LeaderboardList } from '@/components/leaderboard-list';
 import { FriendRequestsModal } from '@/components/friend-requests-modal';
+import { FriendsModal } from '@/components/friends-modal';
 import { useAuth } from '@/lib/auth-context';
 
 export default function ClassementPage() {
   const [viewMode, setViewMode] = useState<'global' | 'friends'>('global');
   const [showRequestsModal, setShowRequestsModal] = useState(false);
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [requestsCount, setRequestsCount] = useState(0);
   const { profile } = useAuth();
 
@@ -86,6 +88,23 @@ export default function ClassementPage() {
         </button>
       </div>
 
+      {viewMode === 'friends' && (
+        <div className="mb-6">
+          <button
+            onClick={() => setShowFriendsModal(true)}
+            className="relative w-full py-4 px-6 rounded-xl bg-gradient-to-r from-[#C1322B]/20 via-[#8A2BE2]/20 to-[#007BFF]/20 border-2 border-[#C1322B]/30 hover:border-[#C1322B]/50 transition-all flex items-center justify-center gap-3 group"
+          >
+            <UserPlus className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+            <span className="text-white font-bold text-lg">Amis & Parrainage</span>
+            {requestsCount > 0 && (
+              <span className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white text-sm font-bold rounded-full flex items-center justify-center shadow-lg animate-pulse">
+                {requestsCount}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
+
       <LeaderboardList viewMode={viewMode} />
 
       <div className="mt-6 p-4 rounded-2xl bg-gradient-to-r from-[#C1322B]/10 to-purple-500/10 border border-[#C1322B]/20">
@@ -105,6 +124,14 @@ export default function ClassementPage() {
         isOpen={showRequestsModal}
         onClose={() => setShowRequestsModal(false)}
         onRequestsChange={() => {
+          loadRequestsCount();
+        }}
+      />
+
+      <FriendsModal
+        open={showFriendsModal}
+        onClose={() => {
+          setShowFriendsModal(false);
           loadRequestsCount();
         }}
       />
