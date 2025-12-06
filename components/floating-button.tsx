@@ -18,7 +18,7 @@ export function FloatingButton({ onClick }: FloatingButtonProps) {
   };
 
   return (
-    <div className="fixed bottom-20 left-0 right-0 px-4 z-40">
+    <div className="fixed bottom-24 left-0 right-0 px-4 z-40">
       <div className="max-w-2xl mx-auto">
         <motion.button
           onClick={handleClick}

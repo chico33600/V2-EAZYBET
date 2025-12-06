@@ -38,7 +38,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <>
       <HeaderCoins onCoinsClick={() => setModalOpen(true)} />
-      <div className="min-h-screen pt-20 pb-24">
+      <div className="min-h-screen pt-20 pb-32">
         {children}
       </div>
       {shouldShowFloatingButton && (

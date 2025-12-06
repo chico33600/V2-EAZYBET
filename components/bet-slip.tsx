@@ -90,7 +90,7 @@ export function BetSlip() {
 
   if (!isExpanded) {
     return (
-      <div className="fixed bottom-20 left-0 right-0 z-50 px-4 animate-fade-in">
+      <div className="fixed bottom-24 left-0 right-0 z-50 px-4 animate-fade-in">
         <div
           onClick={() => setIsExpanded(true)}
           className="max-w-2xl mx-auto bg-gradient-to-r from-[#C1322B] to-[#8B1F1A] rounded-2xl p-4 shadow-2xl cursor-pointer hover:shadow-3xl transition-all border border-[#F5C144]/20 active:scale-[0.98]"
