@@ -3,6 +3,7 @@
 import { Match } from '@/lib/mock-data';
 import { useBetStore, BetType } from '@/lib/store';
 import { TEAM_BACKGROUNDS } from '@/lib/team-backgrounds';
+import { MatchCountdown } from './match-countdown';
 
 interface MatchCardProps {
   match: Match;
@@ -148,6 +149,12 @@ export function MatchCard({ match }: MatchCardProps) {
       <div className="absolute top-3 left-3 bg-[#C1322B]/90 backdrop-blur-sm px-3 py-1 rounded-full z-10">
         <p className="text-white text-xs font-semibold">{match.league}</p>
       </div>
+
+      {!isFinished && (
+        <div className="absolute top-3 right-3 z-10">
+          <MatchCountdown datetime={match.datetime} />
+        </div>
+      )}
 
       <div className="absolute top-0 left-0 right-0 bottom-0 flex flex-col justify-between p-4 z-10">
         <div></div>
