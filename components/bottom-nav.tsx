@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Home, User, Trophy, Gift } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -13,9 +14,37 @@ const navItems = [
 export function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      if (currentScrollY < 50) {
+        setIsVisible(true);
+      } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsVisible(false);
+      } else if (currentScrollY < lastScrollY) {
+        setIsVisible(true);
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [lastScrollY]);
 
   return (
-    <div className="nav-bottom-fixed glassmorphism border-t border-[#30363D] px-4 py-2 safe-area-bottom">
+    <div
+      className={`nav-bottom-fixed glassmorphism border-t border-[#30363D] px-4 py-2 safe-area-bottom transition-transform duration-300 ease-in-out ${
+        isVisible ? 'translate-y-0' : 'translate-y-full'
+      }`}
+    >
       <div className="max-w-2xl mx-auto flex items-center justify-around">
         {navItems.map((item) => {
           const Icon = item.icon;
