@@ -304,7 +304,7 @@ export function BetSlip() {
           )}
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#1A1F27] via-[#1A1F27] to-transparent">
+        <div className="absolute bottom-20 left-0 right-0 p-6 bg-gradient-to-t from-[#1A1F27] via-[#1A1F27] to-transparent">
           <Button
             onClick={handlePlaceBet}
             disabled={!betAmount || betAmount <= 0 || betAmount > availableBalance || isPlacing}
