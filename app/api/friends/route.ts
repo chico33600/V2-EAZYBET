@@ -8,9 +8,57 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+    const searchQuery = searchParams.get('search');
 
     if (!userId) {
       return createErrorResponse('User ID is required', 400);
+    }
+
+    if (searchQuery) {
+      const { data: allUsers, error: searchError } = await supabase
+        .from('profiles')
+        .select('id, username, leaderboard_score, avatar_url')
+        .ilike('username', `%${searchQuery}%`)
+        .neq('id', userId)
+        .limit(20);
+
+      if (searchError) {
+        console.error('Search users error:', searchError);
+        return createErrorResponse('Failed to search users', 500);
+      }
+
+      const { data: friendships, error: friendshipsError } = await supabase
+        .from('friendships')
+        .select('user_id, friend_id, status')
+        .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+
+      if (friendshipsError) {
+        console.error('Get friendships error:', friendshipsError);
+        return createErrorResponse('Failed to get friendships', 500);
+      }
+
+      const friendshipMap = new Map();
+      (friendships || []).forEach((f: any) => {
+        const otherId = f.user_id === userId ? f.friend_id : f.user_id;
+        if (f.status === 'accepted') {
+          friendshipMap.set(otherId, 'accepted');
+        } else if (f.status === 'pending' && f.user_id === userId) {
+          friendshipMap.set(otherId, 'pending_sent');
+        } else if (f.status === 'pending' && f.friend_id === userId) {
+          friendshipMap.set(otherId, 'pending_received');
+        }
+      });
+
+      const users = (allUsers || []).map((user: any) => ({
+        user_id: user.id,
+        username: user.username,
+        avatar_url: user.avatar_url,
+        leaderboard_score: user.leaderboard_score,
+        is_friend: friendshipMap.get(user.id) === 'accepted',
+        friendship_status: friendshipMap.get(user.id) || 'none'
+      }));
+
+      return createSuccessResponse({ users });
     }
 
     const { data: friendships, error } = await supabase
@@ -21,8 +69,8 @@ export async function GET(request: NextRequest) {
         friend_id,
         status,
         created_at,
-        user:profiles!friendships_user_id_fkey(id, username, tokens, diamonds, won_bets),
-        friend:profiles!friendships_friend_id_fkey(id, username, tokens, diamonds, won_bets)
+        user:profiles!friendships_user_id_fkey(id, username, leaderboard_score, avatar_url),
+        friend:profiles!friendships_friend_id_fkey(id, username, leaderboard_score, avatar_url)
       `)
       .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
       .eq('status', 'accepted');
@@ -35,21 +83,19 @@ export async function GET(request: NextRequest) {
     const friends = (friendships || []).map((f: any) => {
       if (f.user_id === userId) {
         return {
-          id: f.friend_id,
+          friend_id: f.friend_id,
           username: f.friend.username,
-          tokens: f.friend.tokens,
-          diamonds: f.friend.diamonds,
-          won_bets: f.friend.won_bets,
-          friendship_id: f.id
+          leaderboard_score: f.friend.leaderboard_score,
+          avatar_url: f.friend.avatar_url,
+          created_at: f.created_at
         };
       } else {
         return {
-          id: f.user_id,
+          friend_id: f.user_id,
           username: f.user.username,
-          tokens: f.user.tokens,
-          diamonds: f.user.diamonds,
-          won_bets: f.user.won_bets,
-          friendship_id: f.id
+          leaderboard_score: f.user.leaderboard_score,
+          avatar_url: f.user.avatar_url,
+          created_at: f.created_at
         };
       }
     });

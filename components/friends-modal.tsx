@@ -23,6 +23,15 @@ interface SearchResult {
   avatar_url: string | null;
   leaderboard_score: number;
   is_friend: boolean;
+  friendship_status: 'none' | 'accepted' | 'pending_sent' | 'pending_received';
+}
+
+interface FriendRequest {
+  friendship_id: string;
+  sender_id: string;
+  username: string;
+  diamonds: number;
+  created_at: string;
 }
 
 interface FriendsModalProps {
@@ -34,6 +43,7 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
   const { profile } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [referralLink, setReferralLink] = useState('');
   const [referralCount, setReferralCount] = useState(0);
@@ -45,6 +55,7 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
     if (open && profile?.id) {
       loadFriends();
       loadReferralData();
+      loadFriendRequests();
     }
   }, [open, profile?.id]);
 
@@ -90,6 +101,21 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
     }
   }
 
+  async function loadFriendRequests() {
+    if (!profile?.id) return;
+
+    try {
+      const response = await fetch(`/api/friends/requests?userId=${profile.id}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setFriendRequests(data.data.requests || []);
+      }
+    } catch (error) {
+      console.error('Error loading friend requests:', error);
+    }
+  }
+
   async function searchUsers() {
     if (!profile?.id || !searchQuery.trim()) return;
 
@@ -115,21 +141,44 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
       const response = await fetch('/api/friends', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: profile.id, friendId })
+        body: JSON.stringify({ userId: profile.id, targetUserId: friendId })
       });
 
       const data = await response.json();
 
       if (data.success) {
-        loadFriends();
         setSearchResults(prev =>
           prev.map(user =>
-            user.user_id === friendId ? { ...user, is_friend: true } : user
+            user.user_id === friendId ? { ...user, friendship_status: 'pending_sent' } : user
           )
         );
       }
     } catch (error) {
       console.error('Error adding friend:', error);
+    }
+  }
+
+  async function handleFriendRequest(friendshipId: string, action: 'accept' | 'reject') {
+    if (!profile?.id) return;
+
+    try {
+      const response = await fetch('/api/friends/requests', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ friendshipId, action, userId: profile.id })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        loadFriendRequests();
+        loadFriends();
+        if (searchQuery) {
+          searchUsers();
+        }
+      }
+    } catch (error) {
+      console.error('Error handling friend request:', error);
     }
   }
 
@@ -224,6 +273,55 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
           </TabsContent>
 
           <TabsContent value="search" className="mt-4 space-y-4">
+            {friendRequests.length > 0 && (
+              <div className="space-y-3 mb-4">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Demandes d'amis ({friendRequests.length})
+                </h3>
+                <AnimatePresence>
+                  {friendRequests.map((request, index) => (
+                    <motion.div
+                      key={request.friendship_id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-500/30"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#C1322B] to-[#8A2BE2] flex items-center justify-center">
+                          <User className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-white">{request.username}</p>
+                          <p className="text-sm text-yellow-400">{request.diamonds.toLocaleString()} 💎</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleFriendRequest(request.friendship_id, 'accept')}
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <Check className="w-4 h-4 mr-1" />
+                          Accepter
+                        </Button>
+                        <Button
+                          onClick={() => handleFriendRequest(request.friendship_id, 'reject')}
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
               <Input
@@ -264,10 +362,39 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
                           <p className="text-sm text-yellow-400">{user.leaderboard_score.toLocaleString()} 💎</p>
                         </div>
                       </div>
-                      {user.is_friend ? (
+                      {user.friendship_status === 'accepted' ? (
                         <div className="flex items-center gap-2 text-green-400 text-sm">
                           <Check className="w-4 h-4" />
                           Ami
+                        </div>
+                      ) : user.friendship_status === 'pending_sent' ? (
+                        <div className="flex items-center gap-2 text-yellow-400 text-sm">
+                          <User className="w-4 h-4" />
+                          En attente
+                        </div>
+                      ) : user.friendship_status === 'pending_received' ? (
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => {
+                              const request = friendRequests.find(r => r.sender_id === user.user_id);
+                              if (request) handleFriendRequest(request.friendship_id, 'accept');
+                            }}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Check className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              const request = friendRequests.find(r => r.sender_id === user.user_id);
+                              if (request) handleFriendRequest(request.friendship_id, 'reject');
+                            }}
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
                         </div>
                       ) : (
                         <Button
