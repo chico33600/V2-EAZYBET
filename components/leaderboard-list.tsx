@@ -11,6 +11,7 @@ interface LeaderboardEntry {
   username: string;
   avatar_url: string | null;
   score: number;
+  win_rate: number;
 }
 
 interface UserRank {
@@ -19,6 +20,7 @@ interface UserRank {
   username: string;
   avatar_url: string | null;
   score: number;
+  win_rate: number;
 }
 
 interface LeaderboardListProps {
@@ -209,6 +211,7 @@ export function LeaderboardList({ viewMode = 'global' }: LeaderboardListProps) {
                 #{userRank.rank}
               </p>
               <p className="text-yellow-400 font-bold text-sm">{userRank.score.toLocaleString()} 💎</p>
+              <p className="text-green-400 font-semibold text-xs">{userRank.win_rate.toFixed(0)}% réussite</p>
             </div>
           </div>
         </motion.div>
@@ -269,6 +272,7 @@ export function LeaderboardList({ viewMode = 'global' }: LeaderboardListProps) {
                       {entry.score.toLocaleString()}
                     </p>
                     <p className="text-yellow-400 text-xs font-semibold">💎 Diamants</p>
+                    <p className="text-green-400 text-xs font-medium mt-0.5">{entry.win_rate.toFixed(0)}% réussite</p>
                   </div>
                 </div>
               </motion.div>

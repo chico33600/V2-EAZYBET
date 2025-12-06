@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
           username: userRankData.username,
           avatar_url: userRankData.avatar_url,
           score: Number(userRankData.leaderboard_score),
+          win_rate: Number(userRankData.win_rate),
         } : null,
       });
     }
@@ -85,6 +86,7 @@ export async function GET(request: NextRequest) {
       username: player.username,
       avatar_url: player.avatar_url,
       score: Number(player.leaderboard_score),
+      win_rate: Number(player.win_rate),
     }));
 
     console.log('[Leaderboard API] Mapped leaderboard:', JSON.stringify(leaderboard.slice(0, 3), null, 2));
