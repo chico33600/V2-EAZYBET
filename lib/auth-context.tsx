@@ -161,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
+    sessionStorage.removeItem('eazybet_session_active');
   };
 
   return (

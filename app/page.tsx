@@ -23,7 +23,7 @@ export default function Home() {
   const { hasNewBet, setHasNewBet } = useBadgeStore();
   const { showTutorial, setShowTutorial } = useTutorialStore();
   const [mounted, setMounted] = useState(false);
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
   const [activeBets, setActiveBets] = useState<any[]>([]);
   const [finishedBets, setFinishedBets] = useState<any[]>([]);
@@ -34,6 +34,50 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!user || authLoading) return;
+
+    const SESSION_KEY = 'eazybet_session_active';
+    const LAST_ACTIVITY_KEY = 'eazybet_last_activity';
+    const INACTIVITY_THRESHOLD = 30 * 60 * 1000;
+
+    const isSessionActive = sessionStorage.getItem(SESSION_KEY);
+    const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
+    const now = Date.now();
+
+    let shouldShowSplash = false;
+
+    if (!isSessionActive) {
+      shouldShowSplash = true;
+      sessionStorage.setItem(SESSION_KEY, 'true');
+    } else if (lastActivity) {
+      const timeSinceLastActivity = now - parseInt(lastActivity, 10);
+      if (timeSinceLastActivity > INACTIVITY_THRESHOLD) {
+        shouldShowSplash = true;
+      }
+    }
+
+    localStorage.setItem(LAST_ACTIVITY_KEY, now.toString());
+
+    if (shouldShowSplash) {
+      setShowSplash(true);
+    }
+
+    const updateActivity = () => {
+      localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+    };
+
+    window.addEventListener('click', updateActivity);
+    window.addEventListener('keydown', updateActivity);
+    window.addEventListener('touchstart', updateActivity);
+
+    return () => {
+      window.removeEventListener('click', updateActivity);
+      window.removeEventListener('keydown', updateActivity);
+      window.removeEventListener('touchstart', updateActivity);
+    };
+  }, [user, authLoading]);
 
   useEffect(() => {
     if (!authLoading && !user) {
