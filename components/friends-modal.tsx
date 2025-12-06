@@ -86,7 +86,7 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
     if (!profile?.id) return;
 
     try {
-      const { data: friendsData, error } = await supabase
+      const { data: friendsData, error: friendsError } = await supabase
         .from('friends')
         .select(`
           id,
@@ -97,12 +97,28 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
         `)
         .eq('user_id', profile.id);
 
-      if (error) {
-        console.error('Error loading friends:', error);
-        return;
+      if (friendsError) {
+        console.error('Error loading friends:', friendsError);
       }
 
-      const friends = (friendsData || []).map((f: any) => ({
+      const { data: acceptedFriendships, error: friendshipsError } = await supabase
+        .from('friendships')
+        .select(`
+          id,
+          user_id,
+          friend_id,
+          created_at,
+          user:profiles!friendships_user_id_fkey(id, username, leaderboard_score, avatar_url),
+          friend:profiles!friendships_friend_id_fkey(id, username, leaderboard_score, avatar_url)
+        `)
+        .or(`user_id.eq.${profile.id},friend_id.eq.${profile.id}`)
+        .eq('status', 'accepted');
+
+      if (friendshipsError) {
+        console.error('Error loading accepted friendships:', friendshipsError);
+      }
+
+      const friendsFromFriendsTable = (friendsData || []).map((f: any) => ({
         friend_id: f.friend_id,
         username: f.friend.username,
         leaderboard_score: f.friend.leaderboard_score,
@@ -110,7 +126,33 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
         created_at: f.created_at
       }));
 
-      setFriends(friends);
+      const friendsFromFriendshipsTable = (acceptedFriendships || []).map((f: any) => {
+        if (f.user_id === profile.id) {
+          return {
+            friend_id: f.friend_id,
+            username: f.friend.username,
+            leaderboard_score: f.friend.leaderboard_score,
+            avatar_url: f.friend.avatar_url,
+            created_at: f.created_at
+          };
+        } else {
+          return {
+            friend_id: f.user_id,
+            username: f.user.username,
+            leaderboard_score: f.user.leaderboard_score,
+            avatar_url: f.user.avatar_url,
+            created_at: f.created_at
+          };
+        }
+      });
+
+      const allFriends = [...friendsFromFriendsTable, ...friendsFromFriendshipsTable];
+
+      const uniqueFriends = Array.from(
+        new Map(allFriends.map(friend => [friend.friend_id, friend])).values()
+      );
+
+      setFriends(uniqueFriends);
     } catch (error) {
       console.error('Error loading friends:', error);
     }
@@ -221,33 +263,29 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
         return;
       }
 
-      const { data: friendships, error: friendshipsError } = await supabase
+      const { data: friendsFromFriendsTable } = await supabase
         .from('friends')
         .select('user_id, friend_id')
         .eq('user_id', profile.id);
 
-      if (friendshipsError) {
-        console.error('Get friendships error:', friendshipsError);
-        setLoading(false);
-        return;
-      }
-
-      const { data: pendingRequests } = await supabase
+      const { data: allFriendships } = await supabase
         .from('friendships')
         .select('user_id, friend_id, status')
-        .or(`user_id.eq.${profile.id},friend_id.eq.${profile.id}`)
-        .eq('status', 'pending');
+        .or(`user_id.eq.${profile.id},friend_id.eq.${profile.id}`);
 
       const friendshipMap = new Map();
-      (friendships || []).forEach((f: any) => {
+
+      (friendsFromFriendsTable || []).forEach((f: any) => {
         friendshipMap.set(f.friend_id, 'accepted');
       });
 
-      (pendingRequests || []).forEach((f: any) => {
+      (allFriendships || []).forEach((f: any) => {
         const otherId = f.user_id === profile.id ? f.friend_id : f.user_id;
-        if (f.user_id === profile.id) {
+        if (f.status === 'accepted') {
+          friendshipMap.set(otherId, 'accepted');
+        } else if (f.status === 'pending' && f.user_id === profile.id) {
           friendshipMap.set(otherId, 'pending_sent');
-        } else {
+        } else if (f.status === 'pending' && f.friend_id === profile.id) {
           friendshipMap.set(otherId, 'pending_received');
         }
       });
@@ -357,14 +395,23 @@ export function FriendsModal({ open, onClose }: FriendsModalProps) {
     if (!profile?.id) return;
 
     try {
-      const { error } = await supabase
+      const { error: friendsError } = await supabase
         .from('friends')
         .delete()
         .or(`and(user_id.eq.${profile.id},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${profile.id})`);
 
-      if (error) {
-        console.error('Remove friend error:', error);
-        return;
+      if (friendsError) {
+        console.error('Remove friend from friends table error:', friendsError);
+      }
+
+      const { error: friendshipsError } = await supabase
+        .from('friendships')
+        .delete()
+        .or(`and(user_id.eq.${profile.id},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${profile.id})`)
+        .eq('status', 'accepted');
+
+      if (friendshipsError) {
+        console.error('Remove friend from friendships table error:', friendshipsError);
       }
 
       setFriends(prev => prev.filter(f => f.friend_id !== friendId));
