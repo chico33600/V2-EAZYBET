@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 
@@ -143,11 +144,20 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#8B0000] to-[#000000] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-b from-purple-900 via-violet-950 to-black flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-2">EazyBet</h1>
-          <p className="text-white/70 text-sm">Pariez et gagnez facilement</p>
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <Image
+              src="/logo_ezbc_.png"
+              alt="EazyBet Logo"
+              width={60}
+              height={60}
+              className="rounded-full"
+            />
+            <h1 className="text-5xl font-bold text-white">EazyBet</h1>
+          </div>
+          <p className="text-white/70 text-sm">Entrez dans le match et gagnez votre première crypto</p>
         </div>
 
         <div className="bg-[#1C2128]/80 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-[#30363D]">
