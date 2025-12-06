@@ -15,7 +15,7 @@ export function BottomNav() {
   const router = useRouter();
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 glassmorphism border-t border-[#30363D] px-4 py-2 z-50 safe-area-bottom">
+    <div className="nav-bottom-fixed glassmorphism border-t border-[#30363D] px-4 py-2 safe-area-bottom">
       <div className="max-w-2xl mx-auto flex items-center justify-around">
         {navItems.map((item) => {
           const Icon = item.icon;
