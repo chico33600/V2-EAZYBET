@@ -27,24 +27,37 @@ export async function GET(request: NextRequest) {
         return createErrorResponse('Failed to search users', 500);
       }
 
-      const { data: friendships, error: friendshipsError } = await supabase
+      const { data: friendsData, error: friendsError } = await supabase
+        .from('friends')
+        .select('friend_id')
+        .eq('user_id', userId);
+
+      if (friendsError) {
+        console.error('Get friends error:', friendsError);
+        return createErrorResponse('Failed to get friends', 500);
+      }
+
+      const { data: pendingRequests, error: pendingError } = await supabase
         .from('friendships')
         .select('user_id, friend_id, status')
-        .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+        .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
+        .eq('status', 'pending');
 
-      if (friendshipsError) {
-        console.error('Get friendships error:', friendshipsError);
-        return createErrorResponse('Failed to get friendships', 500);
+      if (pendingError) {
+        console.error('Get pending requests error:', pendingError);
+        return createErrorResponse('Failed to get pending requests', 500);
       }
 
       const friendshipMap = new Map();
-      (friendships || []).forEach((f: any) => {
+      (friendsData || []).forEach((f: any) => {
+        friendshipMap.set(f.friend_id, 'accepted');
+      });
+
+      (pendingRequests || []).forEach((f: any) => {
         const otherId = f.user_id === userId ? f.friend_id : f.user_id;
-        if (f.status === 'accepted') {
-          friendshipMap.set(otherId, 'accepted');
-        } else if (f.status === 'pending' && f.user_id === userId) {
+        if (f.user_id === userId) {
           friendshipMap.set(otherId, 'pending_sent');
-        } else if (f.status === 'pending' && f.friend_id === userId) {
+        } else {
           friendshipMap.set(otherId, 'pending_received');
         }
       });
@@ -61,44 +74,29 @@ export async function GET(request: NextRequest) {
       return createSuccessResponse({ users });
     }
 
-    const { data: friendships, error } = await supabase
-      .from('friendships')
+    const { data: friendsData, error } = await supabase
+      .from('friends')
       .select(`
         id,
         user_id,
         friend_id,
-        status,
         created_at,
-        user:profiles!friendships_user_id_fkey(id, username, leaderboard_score, avatar_url),
-        friend:profiles!friendships_friend_id_fkey(id, username, leaderboard_score, avatar_url)
+        friend:profiles!friends_friend_id_fkey(id, username, leaderboard_score, avatar_url)
       `)
-      .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
-      .eq('status', 'accepted');
+      .eq('user_id', userId);
 
     if (error) {
       console.error('Get friends error:', error);
       return createErrorResponse('Failed to fetch friends', 500);
     }
 
-    const friends = (friendships || []).map((f: any) => {
-      if (f.user_id === userId) {
-        return {
-          friend_id: f.friend_id,
-          username: f.friend.username,
-          leaderboard_score: f.friend.leaderboard_score,
-          avatar_url: f.friend.avatar_url,
-          created_at: f.created_at
-        };
-      } else {
-        return {
-          friend_id: f.user_id,
-          username: f.user.username,
-          leaderboard_score: f.user.leaderboard_score,
-          avatar_url: f.user.avatar_url,
-          created_at: f.created_at
-        };
-      }
-    });
+    const friends = (friendsData || []).map((f: any) => ({
+      friend_id: f.friend_id,
+      username: f.friend.username,
+      leaderboard_score: f.friend.leaderboard_score,
+      avatar_url: f.friend.avatar_url,
+      created_at: f.created_at
+    }));
 
     return createSuccessResponse({ friends });
 
@@ -177,7 +175,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { error } = await supabase
-      .from('friendships')
+      .from('friends')
       .delete()
       .or(`and(user_id.eq.${userId},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${userId})`);
 
