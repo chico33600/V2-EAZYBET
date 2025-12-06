@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     console.log('[Leaderboard API] Params:', { limit, offset, userId, friendsOnly });
 
     if (userId && !friendsOnly) {
-      console.log('[Leaderboard API] Fetching global user rank for:', userId);
+      console.log('[Leaderboard API] Fetching user rank for:', userId);
       const { data: userRank, error: rankError } = await supabase
         .rpc('get_user_rank', { user_id_input: userId });
 
@@ -29,29 +29,6 @@ export async function GET(request: NextRequest) {
       }
 
       const userRankData = userRank && userRank.length > 0 ? userRank[0] : null;
-
-      return createSuccessResponse({
-        user_rank: userRankData ? {
-          rank: Number(userRankData.rank),
-          user_id: userRankData.user_id,
-          username: userRankData.username,
-          avatar_url: userRankData.avatar_url,
-          score: Number(userRankData.leaderboard_score),
-        } : null,
-      });
-    }
-
-    if (userId && friendsOnly) {
-      console.log('[Leaderboard API] Fetching friends user rank for:', userId);
-      const { data: friendsLeaderboard, error: friendsError } = await supabase
-        .rpc('get_friends_leaderboard', { user_id_input: userId });
-
-      if (friendsError) {
-        console.error('Friends leaderboard fetch error:', friendsError);
-        return createErrorResponse('Failed to fetch friends leaderboard', 500);
-      }
-
-      const userRankData = (friendsLeaderboard || []).find((entry: any) => entry.user_id === userId);
 
       return createSuccessResponse({
         user_rank: userRankData ? {
