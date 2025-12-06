@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Trophy, Medal, Award, Crown, UserPlus, Check } from 'lucide-react';
+import { User, Trophy, Medal, Award, Crown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/auth-context';
-import { toast } from 'sonner';
 
 interface LeaderboardEntry {
   rank: number;
@@ -34,7 +33,6 @@ export function LeaderboardList({ viewMode = 'global' }: LeaderboardListProps) {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
-  const [friendRequestsSent, setFriendRequestsSent] = useState<Set<string>>(new Set());
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const { profile } = useAuth();
@@ -179,33 +177,6 @@ export function LeaderboardList({ viewMode = 'global' }: LeaderboardListProps) {
     }
   }
 
-  async function sendFriendRequest(targetUserId: string) {
-    if (!profile?.id) return;
-
-    try {
-      const response = await fetch('/api/friends', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: profile.id,
-          targetUserId
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setFriendRequestsSent(prev => new Set(prev).add(targetUserId));
-        toast.success('Demande d\'ami envoyée');
-      } else {
-        toast.error(data.error || 'Erreur lors de l\'envoi');
-      }
-    } catch (error) {
-      console.error('Error sending friend request:', error);
-      toast.error('Erreur lors de l\'envoi');
-    }
-  }
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -293,32 +264,11 @@ export function LeaderboardList({ viewMode = 'global' }: LeaderboardListProps) {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="text-right">
-                      <p className={`text-2xl font-black ${isTopThree ? 'text-white' : isCurrentUser ? 'text-purple-300' : 'text-slate-300'}`}>
-                        {entry.score.toLocaleString()}
-                      </p>
-                      <p className="text-yellow-400 text-xs font-semibold">💎 Diamants</p>
-                    </div>
-
-                    {viewMode === 'global' && !isCurrentUser && profile?.id && (
-                      <button
-                        onClick={() => sendFriendRequest(entry.user_id)}
-                        disabled={friendRequestsSent.has(entry.user_id)}
-                        className={`p-2 rounded-lg transition-all ${
-                          friendRequestsSent.has(entry.user_id)
-                            ? 'bg-green-500/20 text-green-400 cursor-not-allowed'
-                            : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-400'
-                        }`}
-                        title={friendRequestsSent.has(entry.user_id) ? 'Demande envoyée' : 'Ajouter en ami'}
-                      >
-                        {friendRequestsSent.has(entry.user_id) ? (
-                          <Check className="w-5 h-5" />
-                        ) : (
-                          <UserPlus className="w-5 h-5" />
-                        )}
-                      </button>
-                    )}
+                  <div className="text-right flex-shrink-0">
+                    <p className={`text-2xl font-black ${isTopThree ? 'text-white' : isCurrentUser ? 'text-purple-300' : 'text-slate-300'}`}>
+                      {entry.score.toLocaleString()}
+                    </p>
+                    <p className="text-yellow-400 text-xs font-semibold">💎 Diamants</p>
                   </div>
                 </div>
               </motion.div>
