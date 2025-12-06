@@ -28,7 +28,7 @@ export function SplashScreen({ onComplete, minDuration = 1500 }: SplashScreenPro
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-b from-purple-900 via-violet-950 to-black animate-fadeIn"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-b from-purple-900 via-violet-950 to-black animate-fadeIn"
       style={{
         animation: isVisible ? 'none' : 'fadeOut 0.5s ease-out forwards',
       }}
