@@ -14,30 +14,33 @@ const navItems = [
 export function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+  const [scrollTimeout, setScrollTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+      setIsVisible(true);
 
-      if (currentScrollY < 50) {
-        setIsVisible(true);
-      } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        setIsVisible(false);
-      } else if (currentScrollY < lastScrollY) {
-        setIsVisible(true);
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
       }
 
-      setLastScrollY(currentScrollY);
+      const timeout = setTimeout(() => {
+        setIsVisible(false);
+      }, 2000);
+
+      setScrollTimeout(timeout);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
     };
-  }, [lastScrollY]);
+  }, [scrollTimeout]);
 
   return (
     <div
