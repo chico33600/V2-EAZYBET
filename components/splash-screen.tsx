@@ -96,7 +96,7 @@ export function SplashScreen({ onComplete, minDuration = 1500 }: SplashScreenPro
 
           <div className="relative">
             <Image
-              src="/logo_ezbc_.png"
+              src="/logo_ezbc_ copy copy.png"
               alt="EazyBet Logo"
               width={120}
               height={120}

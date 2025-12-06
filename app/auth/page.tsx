@@ -149,7 +149,7 @@ export default function AuthPage() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-2">
             <Image
-              src="/logo_ezbc_.png"
+              src="/logo_ezbc_ copy copy.png"
               alt="EazyBet Logo"
               width={60}
               height={60}
