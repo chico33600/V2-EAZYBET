@@ -44,8 +44,8 @@ export function BottomNav() {
 
   return (
     <div
-      className={`nav-bottom-fixed glassmorphism border-t border-[#30363D] px-4 py-2 safe-area-bottom transition-all duration-300 ease-in-out ${
-        isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
+      className={`nav-bottom-fixed glassmorphism border-t border-[#30363D] px-4 py-2 safe-area-bottom transition-transform duration-300 ease-in-out ${
+        isVisible ? 'translate-y-0' : 'translate-y-full'
       }`}
     >
       <div className="max-w-2xl mx-auto flex items-center justify-around">
