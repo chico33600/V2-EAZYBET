@@ -72,6 +72,118 @@ Deno.serve(async (req: Request) => {
 
     console.log('✅ [SYNC] Match statuses updated');
 
+    // Step 1.5: Fetch new upcoming matches from API
+    console.log('🆕 [SYNC] Step 1.5: Fetching new upcoming matches...');
+
+    let newMatchesInserted = 0;
+    let matchesUpdated = 0;
+    let apiCallsForMatches = 0;
+
+    for (const competition of COMPETITIONS) {
+      try {
+        const oddsUrl = `https://api.the-odds-api.com/v4/sports/${competition.sportKey}/odds/?regions=eu&markets=h2h&apiKey=${oddsApiKey}`;
+
+        console.log(`🔍 [SYNC] Fetching matches for ${competition.name}...`);
+        apiCallsForMatches++;
+
+        const oddsResponse = await fetch(oddsUrl);
+
+        if (!oddsResponse.ok) {
+          console.error(`❌ [SYNC] Odds API error for ${competition.name}:`, oddsResponse.status);
+          continue;
+        }
+
+        const oddsData = await oddsResponse.json();
+
+        if (!oddsData || oddsData.length === 0) {
+          console.log(`📭 [SYNC] No upcoming matches for ${competition.name}`);
+          continue;
+        }
+
+        console.log(`📊 [SYNC] Found ${oddsData.length} matches for ${competition.name}`);
+
+        for (const match of oddsData) {
+          const matchDate = new Date(match.commence_time);
+
+          // Only insert future matches
+          if (matchDate <= now) {
+            continue;
+          }
+
+          // Get odds from bookmakers
+          let oddsA = 2.0, oddsDraw = 3.0, oddsB = 2.0;
+
+          if (match.bookmakers && match.bookmakers.length > 0) {
+            const bookmaker = match.bookmakers[0];
+            const h2hMarket = bookmaker.markets?.find((m: any) => m.key === 'h2h');
+
+            if (h2hMarket && h2hMarket.outcomes) {
+              const homeOutcome = h2hMarket.outcomes.find((o: any) => o.name === match.home_team);
+              const awayOutcome = h2hMarket.outcomes.find((o: any) => o.name === match.away_team);
+              const drawOutcome = h2hMarket.outcomes.find((o: any) => o.name === 'Draw');
+
+              if (homeOutcome) oddsA = homeOutcome.price;
+              if (awayOutcome) oddsB = awayOutcome.price;
+              if (drawOutcome) oddsDraw = drawOutcome.price;
+            }
+          }
+
+          // Check if match already exists
+          const { data: existingMatch } = await supabase
+            .from('matches')
+            .select('id')
+            .eq('external_api_id', match.id)
+            .maybeSingle();
+
+          if (existingMatch) {
+            // Update existing match
+            const { error: updateError } = await supabase
+              .from('matches')
+              .update({
+                odds_a: oddsA,
+                odds_draw: oddsDraw,
+                odds_b: oddsB,
+                match_date: matchDate.toISOString(),
+                status: 'upcoming'
+              })
+              .eq('id', existingMatch.id);
+
+            if (!updateError) {
+              matchesUpdated++;
+              console.log(`🔄 [SYNC] Updated: ${match.home_team} vs ${match.away_team}`);
+            }
+          } else {
+            // Insert new match
+            const { error: insertError } = await supabase
+              .from('matches')
+              .insert({
+                external_api_id: match.id,
+                team_a: match.home_team,
+                team_b: match.away_team,
+                odds_a: oddsA,
+                odds_draw: oddsDraw,
+                odds_b: oddsB,
+                match_date: matchDate.toISOString(),
+                competition: competition.name,
+                status: 'upcoming',
+                match_mode: 'real'
+              });
+
+            if (!insertError) {
+              newMatchesInserted++;
+              console.log(`✅ [SYNC] Inserted: ${match.home_team} vs ${match.away_team}`);
+            } else {
+              console.error(`❌ [SYNC] Insert error:`, insertError);
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`❌ [SYNC] Error fetching matches for ${competition.name}:`, err);
+      }
+    }
+
+    console.log(`✅ [SYNC] New matches: ${newMatchesInserted}, Updated: ${matchesUpdated}, API calls: ${apiCallsForMatches}`);
+
     console.log('🎯 [SYNC] Step 2: Check for finished matches without results');
 
     const { data: finishedMatches, error: fetchError } = await supabase
@@ -88,15 +200,18 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!finishedMatches || finishedMatches.length === 0) {
-      console.log('✅ [SYNC] No finished matches without results, skipping API calls');
+      console.log('✅ [SYNC] No finished matches without results, skipping score API calls');
+
       return new Response(
         JSON.stringify({
           success: true,
-          message: 'No matches to update',
+          message: 'Match synchronization completed successfully',
           stats: {
+            newMatches: newMatchesInserted,
+            matchesUpdated: matchesUpdated,
             scoresUpdated: 0,
             scoresErrors: 0,
-            apiCallsMade: 0,
+            apiCallsMade: apiCallsForMatches,
           },
         }),
         {
@@ -216,16 +331,18 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    console.log(`🎉 [SYNC] Complete - ${scoresUpdated} scores updated, ${apiCallsMade} API calls made`);
+    console.log(`🎉 [SYNC] Complete - ${newMatchesInserted} new matches, ${matchesUpdated} updated, ${scoresUpdated} scores updated`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Match synchronization complete',
+        message: 'Match synchronization completed successfully',
         stats: {
+          newMatches: newMatchesInserted,
+          matchesUpdated: matchesUpdated,
           scoresUpdated,
           scoresErrors,
-          apiCallsMade,
+          apiCallsMade: apiCallsMade + apiCallsForMatches,
         },
       }),
       {
