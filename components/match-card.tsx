@@ -156,10 +156,10 @@ export function MatchCard({ match }: MatchCardProps) {
         </div>
       )}
 
-      <div className="absolute top-0 left-0 right-0 bottom-0 flex flex-col justify-between p-4 z-10">
+      <div className="absolute top-0 left-0 right-0 bottom-0 flex flex-col justify-between p-4 z-10 pointer-events-none">
         <div></div>
 
-        <div>
+        <div className="pointer-events-auto">
           <div className="bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5 mb-3 inline-block">
             <p className="text-white text-xs font-medium">{match.datetime}</p>
           </div>
@@ -202,10 +202,10 @@ export function MatchCard({ match }: MatchCardProps) {
           </div>
 
           {!isFinished && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2 relative z-20">
               <button
                 onClick={() => handleOddsClick('home', match.homeOdds)}
-                className={`rounded-2xl py-3 px-2 transition-all duration-200 ease-in-out active:scale-95 hover:scale-105 backdrop-blur-md shadow-lg ${
+                className={`rounded-2xl py-3 px-2 transition-all duration-200 ease-in-out active:scale-95 hover:scale-105 backdrop-blur-md shadow-lg relative ${
                   isSelected('home')
                     ? 'bg-[#C1322B] text-white'
                     : 'bg-white/20 hover:bg-white/30 text-white border border-white/20'
@@ -221,7 +221,7 @@ export function MatchCard({ match }: MatchCardProps) {
 
               <button
                 onClick={() => handleOddsClick('draw', match.drawOdds)}
-                className={`rounded-2xl py-3 px-2 transition-all duration-200 ease-in-out active:scale-95 hover:scale-105 backdrop-blur-md shadow-lg ${
+                className={`rounded-2xl py-3 px-2 transition-all duration-200 ease-in-out active:scale-95 hover:scale-105 backdrop-blur-md shadow-lg relative ${
                   isSelected('draw')
                     ? 'bg-[#C1322B] text-white'
                     : 'bg-white/20 hover:bg-white/30 text-white border border-white/20'
@@ -237,7 +237,7 @@ export function MatchCard({ match }: MatchCardProps) {
 
               <button
                 onClick={() => handleOddsClick('away', match.awayOdds)}
-                className={`rounded-2xl py-3 px-2 transition-all duration-200 ease-in-out active:scale-95 hover:scale-105 backdrop-blur-md shadow-lg ${
+                className={`rounded-2xl py-3 px-2 transition-all duration-200 ease-in-out active:scale-95 hover:scale-105 backdrop-blur-md shadow-lg relative ${
                   isSelected('away')
                     ? 'bg-[#C1322B] text-white'
                     : 'bg-white/20 hover:bg-white/30 text-white border border-white/20'
