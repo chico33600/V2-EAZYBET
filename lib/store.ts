@@ -11,6 +11,7 @@ interface UserState {
   deductCoins: (amount: number) => void;
   deductDiamonds: (amount: number) => void;
   setDailyTickets: (tickets: number) => void;
+  decrementTicket: () => void;
 }
 
 export const useUserStore = create<UserState>()(
@@ -24,6 +25,7 @@ export const useUserStore = create<UserState>()(
       deductCoins: (amount) => set((state) => ({ coins: Math.max(0, state.coins - amount) })),
       deductDiamonds: (amount) => set((state) => ({ diamonds: Math.max(0, state.diamonds - amount) })),
       setDailyTickets: (tickets) => set({ dailyTickets: tickets }),
+      decrementTicket: () => set((state) => ({ dailyTickets: Math.max(0, state.dailyTickets - 1) })),
     }),
     {
       name: 'easybet-user-storage',

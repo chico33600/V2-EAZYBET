@@ -7,7 +7,7 @@ import { Ticket } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function HeaderTickets() {
-  const { dailyTickets, setDailyTickets } = useUserStore();
+  const { dailyTickets, setDailyTickets, decrementTicket } = useUserStore();
   const [isAnimating, setIsAnimating] = useState(false);
 
   const fetchTickets = async () => {
@@ -54,9 +54,7 @@ export function HeaderTickets() {
 
     const handleTicketUsed = () => {
       setIsAnimating(true);
-      if (dailyTickets > 0) {
-        setDailyTickets(dailyTickets - 1);
-      }
+      decrementTicket();
       setTimeout(() => {
         setIsAnimating(false);
       }, 800);
@@ -79,7 +77,7 @@ export function HeaderTickets() {
         window.removeEventListener('ticket-used', handleTicketUsed);
       }
     };
-  }, [dailyTickets]);
+  }, []);
 
   const ticketColor = dailyTickets === 0
     ? 'from-red-600/20 to-orange-600/20 border-red-500/30'
