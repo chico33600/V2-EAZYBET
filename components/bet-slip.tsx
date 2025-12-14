@@ -121,35 +121,50 @@ export function BetSlip() {
   if (!isExpanded) {
     return (
       <div className="fixed bottom-24 left-0 right-0 z-50 px-4 animate-fade-in">
-        <div
-          onClick={() => setIsExpanded(true)}
-          className="max-w-2xl mx-auto bg-gradient-to-r from-[#C1322B] to-[#8B1F1A] rounded-2xl p-4 shadow-2xl cursor-pointer hover:shadow-3xl transition-all border border-[#F5C144]/20 active:scale-[0.98]"
-        >
-          {isCombo ? (
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-white/70 text-xs">Pari combiné</p>
-                <p className="text-white font-bold text-sm">{selections.length} sélections</p>
-              </div>
-              <div className="text-right">
-                <p className="text-white/70 text-xs">Cote totale</p>
-                <p className="text-[#F5C144] font-bold text-lg">
-                  {selections.reduce((acc, s) => acc * s.odds, 1).toFixed(2)}
-                </p>
-              </div>
+        <div className="max-w-2xl mx-auto bg-gradient-to-r from-[#C1322B] to-[#8B1F1A] rounded-2xl p-4 shadow-2xl transition-all border border-[#F5C144]/20">
+          <div className="flex items-center gap-3">
+            <div
+              onClick={() => setIsExpanded(true)}
+              className="flex-1 cursor-pointer"
+            >
+              {isCombo ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-white/70 text-xs">Pari combiné</p>
+                    <p className="text-white font-bold text-sm">{selections.length} sélections</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white/70 text-xs">Cote totale</p>
+                    <p className="text-[#F5C144] font-bold text-lg">
+                      {selections.reduce((acc, s) => acc * s.odds, 1).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-white/70 text-xs">Sélection</p>
+                    <p className="text-white font-bold text-sm">{getBetTypeLabel(selections[0])}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white/70 text-xs">Cote</p>
+                    <p className="text-[#F5C144] font-bold text-lg">{selections[0].odds.toFixed(2)}</p>
+                  </div>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-white/70 text-xs">Sélection</p>
-                <p className="text-white font-bold text-sm">{getBetTypeLabel(selections[0])}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-white/70 text-xs">Cote</p>
-                <p className="text-[#F5C144] font-bold text-lg">{selections[0].odds.toFixed(2)}</p>
-              </div>
-            </div>
-          )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('[BetSlip] User clicked X on minimized betslip');
+                clearSelections();
+                resetBetSlip();
+              }}
+              className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            >
+              <X size={18} className="text-white" />
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -328,8 +343,18 @@ export function BetSlip() {
           )}
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-3 mb-4">
-              <p className="text-red-400 text-sm">{error}</p>
+            <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-4 mb-4">
+              <p className="text-red-400 text-sm mb-3">{error}</p>
+              <button
+                onClick={() => {
+                  console.log('[BetSlip] User clicked cancel after error');
+                  clearSelections();
+                  resetBetSlip();
+                }}
+                className="w-full bg-white/10 hover:bg-white/20 text-white py-2 rounded-xl transition-colors text-sm font-medium"
+              >
+                Annuler et choisir un autre match
+              </button>
             </div>
           )}
         </div>
