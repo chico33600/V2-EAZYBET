@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { placeBet, placeCombobet } from '@/lib/api-client';
 import { Coins, X, Gem, Ticket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function BetSlip() {
   const { selections, removeSelection, clearSelections } = useBetStore();
@@ -16,6 +17,8 @@ export function BetSlip() {
   const [isPlacing, setIsPlacing] = useState(false);
   const [error, setError] = useState('');
   const [currency, setCurrency] = useState<'tokens' | 'diamonds'>('tokens');
+  const [showTicketAnimation, setShowTicketAnimation] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const previousSelectionsLength = useRef(selections.length);
 
   const resetBetSlip = () => {
@@ -81,6 +84,14 @@ export function BetSlip() {
     setIsPlacing(true);
     setError('');
 
+    setShowTicketAnimation(true);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('ticket-used'));
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 800));
+
     try {
       if (isCombo) {
         const comboSelections = selections.map(sel => ({
@@ -105,6 +116,7 @@ export function BetSlip() {
       }
 
       console.log('[BetSlip] Clearing selections and resetting...');
+      setShowTicketAnimation(false);
       clearSelections();
       resetBetSlip();
       console.log('[BetSlip] Reset complete!');
@@ -112,6 +124,7 @@ export function BetSlip() {
       console.error('[BetSlip] Bet placement error:', err);
       setError(err.message || 'Erreur lors du placement du pari');
       setIsPlacing(false);
+      setShowTicketAnimation(false);
     }
   };
 
@@ -380,7 +393,47 @@ export function BetSlip() {
         </div>
 
         <div className="absolute bottom-20 left-0 right-0 p-6 bg-gradient-to-t from-[#1A1F27] via-[#1A1F27] to-transparent">
+          <AnimatePresence>
+            {showTicketAnimation && (
+              <motion.div
+                initial={{ opacity: 1, y: 0, scale: 1 }}
+                animate={{
+                  opacity: [1, 1, 0.5, 0],
+                  y: -700,
+                  scale: [1, 1.2, 0.5, 0.3],
+                  x: [0, 20, 40]
+                }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8, ease: "easeInOut" }}
+                className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-50"
+              >
+                <div className="relative">
+                  <Ticket
+                    size={48}
+                    className="text-purple-400 drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]"
+                    style={{
+                      filter: 'drop-shadow(0 0 20px rgba(168, 85, 247, 0.9))'
+                    }}
+                  />
+                  <motion.div
+                    animate={{
+                      scale: [1, 1.5, 1],
+                      opacity: [0.5, 1, 0.5]
+                    }}
+                    transition={{
+                      duration: 0.5,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                    className="absolute inset-0 bg-purple-500/30 rounded-full blur-xl"
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <Button
+            ref={buttonRef}
             onClick={handlePlaceBet}
             disabled={!betAmount || betAmount <= 0 || betAmount > availableBalance || isPlacing || dailyTickets <= 0}
             variant="eazy"
