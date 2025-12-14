@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useBetStore, useBetSlipUIStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
 import { placeBet, placeCombobet } from '@/lib/api-client';
@@ -15,6 +15,15 @@ export function BetSlip() {
   const [isPlacing, setIsPlacing] = useState(false);
   const [error, setError] = useState('');
   const [currency, setCurrency] = useState<'tokens' | 'diamonds'>('tokens');
+
+  useEffect(() => {
+    if (selections.length === 0) {
+      setAmount('');
+      setError('');
+      setCurrency('tokens');
+      setIsExpanded(false);
+    }
+  }, [selections.length, setIsExpanded]);
 
   if (selections.length === 0) return null;
 
@@ -83,9 +92,6 @@ export function BetSlip() {
 
   const handleRemoveSelection = (matchId: string) => {
     removeSelection(matchId);
-    if (selections.length === 1) {
-      setIsExpanded(false);
-    }
   };
 
   if (!isExpanded) {
