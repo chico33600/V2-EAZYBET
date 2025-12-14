@@ -1,27 +1,32 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { useUserStore } from '@/lib/store';
 import { Ticket } from 'lucide-react';
 
 export function HeaderTickets() {
   const { dailyTickets, setDailyTickets } = useUserStore();
-  const [isLoading, setIsLoading] = useState(true);
 
   const fetchTickets = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setIsLoading(false);
+        setDailyTickets(5);
         return;
       }
 
-      const { data: dailyBetsCount } = await supabase
+      const { data: dailyBetsCount, error } = await supabase
         .rpc('get_user_daily_bets_count', {
           p_user_id: user.id,
           p_target_date: new Date().toISOString().split('T')[0]
         });
+
+      if (error) {
+        console.error('Error fetching daily bets count:', error);
+        setDailyTickets(5);
+        return;
+      }
 
       const DAILY_BET_LIMIT = 5;
       const count = (dailyBetsCount as number) || 0;
@@ -30,8 +35,7 @@ export function HeaderTickets() {
       setDailyTickets(ticketsRemaining);
     } catch (error) {
       console.error('Erreur lors de la récupération des tickets:', error);
-    } finally {
-      setIsLoading(false);
+      setDailyTickets(5);
     }
   };
 
@@ -62,15 +66,6 @@ export function HeaderTickets() {
       }
     };
   }, []);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600/20 to-pink-600/20 px-3 py-1.5 rounded-full border border-purple-500/30">
-        <Ticket className="w-4 h-4 text-purple-300" />
-        <span className="text-sm font-semibold text-white">--/5</span>
-      </div>
-    );
-  }
 
   const ticketColor = dailyTickets === 0
     ? 'from-red-600/20 to-orange-600/20 border-red-500/30'
