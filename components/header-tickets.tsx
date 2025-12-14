@@ -3,12 +3,15 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { useUserStore } from '@/lib/store';
-import { Ticket } from 'lucide-react';
+import { Ticket, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { getTimeUntilMidnightParis } from '@/lib/timezone-utils';
 
 export function HeaderTickets() {
   const { dailyTickets, setDailyTickets, decrementTicket } = useUserStore();
   const [isAnimating, setIsAnimating] = useState(false);
+  const [timeUntilReset, setTimeUntilReset] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [showResetTimer, setShowResetTimer] = useState(false);
 
   const fetchTickets = async () => {
     try {
@@ -21,7 +24,7 @@ export function HeaderTickets() {
       const { data: dailyBetsCount, error } = await supabase
         .rpc('get_user_daily_bets_count', {
           p_user_id: user.id,
-          p_target_date: new Date().toISOString().split('T')[0]
+          p_target_date: null
         });
 
       if (error) {
@@ -48,6 +51,11 @@ export function HeaderTickets() {
       fetchTickets();
     }, 30000);
 
+    const timerIntervalId = setInterval(() => {
+      const time = getTimeUntilMidnightParis();
+      setTimeUntilReset(time);
+    }, 1000);
+
     const handleBetPlaced = () => {
       fetchTickets();
     };
@@ -71,6 +79,7 @@ export function HeaderTickets() {
 
     return () => {
       clearInterval(intervalId);
+      clearInterval(timerIntervalId);
       subscription?.unsubscribe();
       if (typeof window !== 'undefined') {
         window.removeEventListener('bet-placed', handleBetPlaced);
@@ -92,35 +101,59 @@ export function HeaderTickets() {
     : 'text-purple-300';
 
   return (
-    <motion.div
-      animate={isAnimating ? {
-        scale: [1, 1.15, 0.95, 1.05, 1],
-        rotate: [0, -5, 5, -3, 0]
-      } : {}}
-      transition={{ duration: 0.5, ease: "easeInOut" }}
-      className={`flex items-center gap-1.5 bg-gradient-to-r ${ticketColor} px-3 py-1.5 rounded-full border transition-all duration-300`}
+    <div
+      className="relative"
+      onMouseEnter={() => setShowResetTimer(dailyTickets === 0)}
+      onMouseLeave={() => setShowResetTimer(false)}
     >
       <motion.div
         animate={isAnimating ? {
-          rotate: [0, -15, 15, -10, 0],
-          scale: [1, 1.2, 1]
+          scale: [1, 1.15, 0.95, 1.05, 1],
+          rotate: [0, -5, 5, -3, 0]
         } : {}}
-        transition={{ duration: 0.6 }}
+        transition={{ duration: 0.5, ease: "easeInOut" }}
+        className={`flex items-center gap-1.5 bg-gradient-to-r ${ticketColor} px-3 py-1.5 rounded-full border transition-all duration-300`}
       >
-        <Ticket className={`w-4 h-4 ${iconColor}`} />
+        <motion.div
+          animate={isAnimating ? {
+            rotate: [0, -15, 15, -10, 0],
+            scale: [1, 1.2, 1]
+          } : {}}
+          transition={{ duration: 0.6 }}
+        >
+          <Ticket className={`w-4 h-4 ${iconColor}`} />
+        </motion.div>
+        <motion.span
+          key={dailyTickets}
+          initial={{ scale: 1 }}
+          animate={isAnimating ? {
+            scale: [1, 1.3, 1],
+            color: ['#ffffff', '#ef4444', '#ffffff']
+          } : {}}
+          transition={{ duration: 0.4 }}
+          className="text-sm font-semibold text-white"
+        >
+          {dailyTickets}/5
+        </motion.span>
       </motion.div>
-      <motion.span
-        key={dailyTickets}
-        initial={{ scale: 1 }}
-        animate={isAnimating ? {
-          scale: [1, 1.3, 1],
-          color: ['#ffffff', '#ef4444', '#ffffff']
-        } : {}}
-        transition={{ duration: 0.4 }}
-        className="text-sm font-semibold text-white"
-      >
-        {dailyTickets}/5
-      </motion.span>
-    </motion.div>
+
+      {showResetTimer && dailyTickets === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-3 py-2 rounded-lg text-xs whitespace-nowrap shadow-lg z-50 border border-gray-700"
+        >
+          <div className="flex items-center gap-2">
+            <Clock className="w-3 h-3" />
+            <span>
+              Réinitialisation dans: {String(timeUntilReset.hours).padStart(2, '0')}:
+              {String(timeUntilReset.minutes).padStart(2, '0')}:
+              {String(timeUntilReset.seconds).padStart(2, '0')}
+            </span>
+          </div>
+        </motion.div>
+      )}
+    </div>
   );
 }

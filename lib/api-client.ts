@@ -102,11 +102,11 @@ export async function placeBet(matchId: string, amount: number, choice: 'A' | 'D
     throw new Error('Non authentifié');
   }
 
-  // Check daily bet limit
+  // Check daily bet limit - function uses Paris timezone by default
   const { data: dailyBetsCount } = await supabase
     .rpc('get_user_daily_bets_count', {
       p_user_id: user.id,
-      p_target_date: new Date().toISOString().split('T')[0]
+      p_target_date: null
     });
 
   const DAILY_BET_LIMIT = 5;
@@ -204,11 +204,11 @@ export async function placeCombobet(
     throw new Error('Non authentifié');
   }
 
-  // Check daily bet limit (combo bet counts as 1)
+  // Check daily bet limit (combo bet counts as 1) - function uses Paris timezone by default
   const { data: dailyBetsCount } = await supabase
     .rpc('get_user_daily_bets_count', {
       p_user_id: user.id,
-      p_target_date: new Date().toISOString().split('T')[0]
+      p_target_date: null
     });
 
   const DAILY_BET_LIMIT = 5;

@@ -40,11 +40,11 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Cannot bet on this match. It has already started or finished.', 400);
     }
 
-    // Check daily bet limit (5 bets per day)
+    // Check daily bet limit (5 bets per day) - function uses Paris timezone by default
     const { data: dailyBetsCount, error: countError } = await supabase
       .rpc('get_user_daily_bets_count', {
         p_user_id: user!.id,
-        p_target_date: new Date().toISOString().split('T')[0]
+        p_target_date: null
       });
 
     if (countError) {

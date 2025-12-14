@@ -4,9 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useBetStore, useBetSlipUIStore, useUserStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
 import { placeBet, placeCombobet } from '@/lib/api-client';
-import { Coins, X, Gem, Ticket } from 'lucide-react';
+import { Coins, X, Gem, Ticket, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getTimeUntilMidnightParis } from '@/lib/timezone-utils';
 
 export function BetSlip() {
   const { selections, removeSelection, clearSelections } = useBetStore();
@@ -18,6 +19,7 @@ export function BetSlip() {
   const [error, setError] = useState('');
   const [currency, setCurrency] = useState<'tokens' | 'diamonds'>('tokens');
   const [showTicketAnimation, setShowTicketAnimation] = useState(false);
+  const [timeUntilReset, setTimeUntilReset] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const previousSelectionsLength = useRef(selections.length);
 
@@ -42,6 +44,18 @@ export function BetSlip() {
       return () => clearTimeout(timer);
     }
   }, [selections, amount, currency]);
+
+  useEffect(() => {
+    const updateTimer = () => {
+      const time = getTimeUntilMidnightParis();
+      setTimeUntilReset(time);
+    };
+
+    updateTimer();
+    const intervalId = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   if (selections.length === 0) {
     if (isExpanded) setIsExpanded(false);
@@ -441,6 +455,26 @@ export function BetSlip() {
           >
             {dailyTickets <= 0 ? 'Pas de tickets disponibles' : isPlacing ? 'Placement en cours...' : isCombo ? 'Placer le pari combiné' : 'Placer le pari'}
           </Button>
+
+          {dailyTickets <= 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg"
+            >
+              <div className="flex items-center justify-center gap-2 text-sm text-red-300">
+                <Clock className="w-4 h-4" />
+                <span>
+                  Nouveaux tickets dans: {String(timeUntilReset.hours).padStart(2, '0')}:
+                  {String(timeUntilReset.minutes).padStart(2, '0')}:
+                  {String(timeUntilReset.seconds).padStart(2, '0')}
+                </span>
+              </div>
+              <p className="text-xs text-center text-gray-400 mt-2">
+                Les tickets se réinitialisent à 00h00 (heure de Paris)
+              </p>
+            </motion.div>
+          )}
         </div>
       </div>
     </div>
