@@ -41,39 +41,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Check daily bet limit (5 bets per day)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
+    const { data: dailyBetsCount, error: countError } = await supabase
+      .rpc('get_user_daily_bets_count', {
+        p_user_id: user!.id,
+        p_target_date: new Date().toISOString().split('T')[0]
+      });
 
-    // Count single bets for today
-    const { count: singleBetsCount, error: singleBetsError } = await supabase
-      .from('bets')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user!.id)
-      .gte('created_at', todayISO);
-
-    if (singleBetsError) {
-      console.error('Error checking single bets:', singleBetsError);
-      return createErrorResponse('Erreur lors de la vérification de la limite de paris', 500);
+    if (countError) {
+      console.error('Error checking daily bet limit:', countError);
+      return createErrorResponse('Failed to verify bet limit', 500);
     }
 
-    // Count combo bets for today
-    const { count: comboBetsCount, error: comboBetsError } = await supabase
-      .from('combo_bets')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user!.id)
-      .gte('created_at', todayISO);
-
-    if (comboBetsError) {
-      console.error('Error checking combo bets:', comboBetsError);
-      return createErrorResponse('Erreur lors de la vérification de la limite de paris', 500);
-    }
-
-    const totalBetsToday = (singleBetsCount || 0) + (comboBetsCount || 0);
     const DAILY_BET_LIMIT = 5;
-    console.log(`[BetLimit] User ${user!.id} has placed ${totalBetsToday} bets today (${singleBetsCount} single + ${comboBetsCount} combo, limit: ${DAILY_BET_LIMIT})`);
-
-    if (totalBetsToday >= DAILY_BET_LIMIT) {
+    if (dailyBetsCount >= DAILY_BET_LIMIT) {
       return createErrorResponse(
         `Limite journalière atteinte ! Vous ne pouvez placer que ${DAILY_BET_LIMIT} paris par jour. Revenez demain pour parier à nouveau.`,
         400
