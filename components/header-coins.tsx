@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Coins, Diamond } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { HeaderTickets } from './header-tickets';
 
 interface HeaderCoinsProps {
   onCoinsClick?: () => void;
@@ -141,6 +142,8 @@ export function HeaderCoins({ onCoinsClick }: HeaderCoinsProps) {
             <Diamond size={16} className="text-[#2A84FF] fill-[#2A84FF]" />
             <span className="text-white font-bold text-xs">{diamonds}</span>
           </button>
+
+          <HeaderTickets />
         </div>
       </div>
     </div>
