@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useBetStore, useBetSlipUIStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
 import { placeBet, placeCombobet } from '@/lib/api-client';
@@ -15,15 +15,24 @@ export function BetSlip() {
   const [isPlacing, setIsPlacing] = useState(false);
   const [error, setError] = useState('');
   const [currency, setCurrency] = useState<'tokens' | 'diamonds'>('tokens');
+  const previousSelectionsLength = useRef(selections.length);
 
   useEffect(() => {
-    if (selections.length === 0) {
+    if (selections.length === 0 && previousSelectionsLength.current > 0) {
       setAmount('');
       setError('');
       setCurrency('tokens');
       setIsExpanded(false);
+      setIsPlacing(false);
     }
+    previousSelectionsLength.current = selections.length;
   }, [selections.length, setIsExpanded]);
+
+  useEffect(() => {
+    if (error && selections.length > 0) {
+      setError('');
+    }
+  }, [selections, amount, currency]);
 
   if (selections.length === 0) return null;
 
@@ -54,7 +63,7 @@ export function BetSlip() {
   const diamondsBonus = currency === 'tokens' ? Math.floor(profit * 0.01) : 0;
 
   const handlePlaceBet = async () => {
-    if (!betAmount || betAmount <= 0 || betAmount > availableBalance) return;
+    if (!betAmount || betAmount <= 0 || betAmount > availableBalance || isPlacing) return;
 
     setIsPlacing(true);
     setError('');
@@ -79,13 +88,14 @@ export function BetSlip() {
         window.dispatchEvent(new CustomEvent('bet-placed'));
       }
 
-      setIsExpanded(false);
       clearSelections();
       setAmount('');
+      setError('');
       setCurrency('tokens');
+      setIsPlacing(false);
+      setIsExpanded(false);
     } catch (err: any) {
       setError(err.message || 'Erreur lors du placement du pari');
-    } finally {
       setIsPlacing(false);
     }
   };
@@ -150,8 +160,12 @@ export function BetSlip() {
             </div>
             <button
               onClick={() => {
-                setIsExpanded(false);
                 clearSelections();
+                setAmount('');
+                setError('');
+                setCurrency('tokens');
+                setIsPlacing(false);
+                setIsExpanded(false);
               }}
               className="text-white/70 hover:text-white transition-colors"
             >
