@@ -76,11 +76,26 @@ export const useBetStore = create<BetState>((set, get) => ({
     });
 
     if (existing) {
-      console.log('[BetStore] Removing selection:', selection.match.id);
+      console.log('[BetStore] Removing selection (exact match):', selection.match.id);
       state.removeSelection(selection.match.id);
     } else {
-      console.log('[BetStore] Adding selection:', selection.match.id);
-      state.addSelection(selection);
+      // Vérifier si on a déjà une sélection sur ce match (avec une autre cote)
+      const sameMatch = state.selections.find(s => s.match.id === selection.match.id);
+      if (sameMatch) {
+        console.log('[BetStore] Replacing selection on same match with different bet type');
+        state.removeSelection(selection.match.id);
+        state.addSelection(selection);
+        return;
+      }
+
+      // En mode pari simple (1 sélection), remplacer automatiquement la sélection
+      if (state.selections.length === 1) {
+        console.log('[BetStore] Replacing existing single selection with new one');
+        set({ selections: [selection] });
+      } else {
+        console.log('[BetStore] Adding selection:', selection.match.id);
+        state.addSelection(selection);
+      }
     }
 
     const newState = get();
