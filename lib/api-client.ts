@@ -102,18 +102,6 @@ export async function placeBet(matchId: string, amount: number, choice: 'A' | 'D
     throw new Error('Non authentifié');
   }
 
-  // Check daily bet limit
-  const { data: dailyBetsCount } = await supabase
-    .rpc('get_user_daily_bets_count', {
-      p_user_id: user.id,
-      p_target_date: new Date().toISOString().split('T')[0]
-    });
-
-  const DAILY_BET_LIMIT = 5;
-  if (dailyBetsCount && dailyBetsCount >= DAILY_BET_LIMIT) {
-    throw new Error(`Limite journalière atteinte ! Vous ne pouvez placer que ${DAILY_BET_LIMIT} paris par jour. Revenez demain pour parier à nouveau.`);
-  }
-
   const { data: profile } = await supabase
     .from('profiles')
     .select('tokens, diamonds, total_bets')
@@ -202,18 +190,6 @@ export async function placeCombobet(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     throw new Error('Non authentifié');
-  }
-
-  // Check daily bet limit (combo bet counts as 1)
-  const { data: dailyBetsCount } = await supabase
-    .rpc('get_user_daily_bets_count', {
-      p_user_id: user.id,
-      p_target_date: new Date().toISOString().split('T')[0]
-    });
-
-  const DAILY_BET_LIMIT = 5;
-  if (dailyBetsCount && dailyBetsCount >= DAILY_BET_LIMIT) {
-    throw new Error(`Limite journalière atteinte ! Vous ne pouvez placer que ${DAILY_BET_LIMIT} paris par jour. Revenez demain pour parier à nouveau.`);
   }
 
   const { data: profile } = await supabase

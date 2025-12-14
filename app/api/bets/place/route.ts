@@ -41,19 +41,42 @@ export async function POST(request: NextRequest) {
     }
 
     // Check daily bet limit (5 bets per day)
-    const { data: dailyBetsCount, error: countError } = await supabase
-      .rpc('get_user_daily_bets_count', {
-        p_user_id: user!.id,
-        p_target_date: new Date().toISOString().split('T')[0]
-      });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayISO = today.toISOString();
 
-    if (countError) {
-      console.error('Error checking daily bet limit:', countError);
-      return createErrorResponse('Failed to verify bet limit', 500);
+    // Count single bets for today
+    const { count: singleBetsCount, error: singleError } = await supabase
+      .from('bets')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user!.id)
+      .eq('is_combo', false)
+      .gte('created_at', todayISO);
+
+    if (singleError) {
+      console.error('Error checking single bets:', singleError);
     }
 
+    // Count distinct combo bets for today
+    const { data: comboBets, error: comboError } = await supabase
+      .from('bets')
+      .select('combo_bet_id')
+      .eq('user_id', user!.id)
+      .eq('is_combo', true)
+      .gte('created_at', todayISO);
+
+    if (comboError) {
+      console.error('Error checking combo bets:', comboError);
+    }
+
+    // Count unique combo_bet_ids
+    const uniqueComboBets = comboBets ? new Set(comboBets.map(b => b.combo_bet_id)).size : 0;
+    const totalBetsToday = (singleBetsCount || 0) + uniqueComboBets;
+
     const DAILY_BET_LIMIT = 5;
-    if (dailyBetsCount >= DAILY_BET_LIMIT) {
+    console.log(`[BetLimit] User ${user!.id} has placed ${totalBetsToday} bets today (limit: ${DAILY_BET_LIMIT})`);
+
+    if (totalBetsToday >= DAILY_BET_LIMIT) {
       return createErrorResponse(
         `Limite journalière atteinte ! Vous ne pouvez placer que ${DAILY_BET_LIMIT} paris par jour. Revenez demain pour parier à nouveau.`,
         400
