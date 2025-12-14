@@ -17,24 +17,32 @@ export function BetSlip() {
   const [currency, setCurrency] = useState<'tokens' | 'diamonds'>('tokens');
   const previousSelectionsLength = useRef(selections.length);
 
-  useEffect(() => {
-    if (selections.length === 0 && previousSelectionsLength.current > 0) {
-      setAmount('');
-      setError('');
-      setCurrency('tokens');
-      setIsExpanded(false);
-      setIsPlacing(false);
-    }
-    previousSelectionsLength.current = selections.length;
-  }, [selections.length, setIsExpanded]);
+  const resetBetSlip = () => {
+    setAmount('');
+    setError('');
+    setCurrency('tokens');
+    setIsPlacing(false);
+    setIsExpanded(false);
+  };
 
   useEffect(() => {
-    if (error && selections.length > 0) {
-      setError('');
+    if (selections.length === 0 && previousSelectionsLength.current > 0) {
+      resetBetSlip();
+    }
+    previousSelectionsLength.current = selections.length;
+  }, [selections.length]);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 100);
+      return () => clearTimeout(timer);
     }
   }, [selections, amount, currency]);
 
-  if (selections.length === 0) return null;
+  if (selections.length === 0) {
+    if (isExpanded) setIsExpanded(false);
+    return null;
+  }
 
   const getBetTypeLabel = (selection: typeof selections[0]) => {
     switch (selection.betType) {
@@ -63,8 +71,12 @@ export function BetSlip() {
   const diamondsBonus = currency === 'tokens' ? Math.floor(profit * 0.01) : 0;
 
   const handlePlaceBet = async () => {
-    if (!betAmount || betAmount <= 0 || betAmount > availableBalance || isPlacing) return;
+    if (!betAmount || betAmount <= 0 || betAmount > availableBalance || isPlacing) {
+      console.log('[BetSlip] Cannot place bet:', { betAmount, availableBalance, isPlacing });
+      return;
+    }
 
+    console.log('[BetSlip] Starting bet placement...', { selections, betAmount, currency });
     setIsPlacing(true);
     setError('');
 
@@ -76,25 +88,27 @@ export function BetSlip() {
           odds: sel.odds
         }));
 
+        console.log('[BetSlip] Placing combo bet...', comboSelections);
         await placeCombobet(comboSelections, betAmount, currency);
       } else {
         const choice = selection.betType === 'home' ? 'A' : selection.betType === 'draw' ? 'Draw' : 'B';
+        console.log('[BetSlip] Placing single bet...', { matchId: selection.match.id, amount: betAmount, choice, currency });
         await placeBet(selection.match.id, betAmount, choice, currency);
       }
 
+      console.log('[BetSlip] Bet placed successfully!');
       await refreshProfile();
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('bet-placed'));
       }
 
+      console.log('[BetSlip] Clearing selections and resetting...');
       clearSelections();
-      setAmount('');
-      setError('');
-      setCurrency('tokens');
-      setIsPlacing(false);
-      setIsExpanded(false);
+      resetBetSlip();
+      console.log('[BetSlip] Reset complete!');
     } catch (err: any) {
+      console.error('[BetSlip] Bet placement error:', err);
       setError(err.message || 'Erreur lors du placement du pari');
       setIsPlacing(false);
     }
@@ -161,11 +175,7 @@ export function BetSlip() {
             <button
               onClick={() => {
                 clearSelections();
-                setAmount('');
-                setError('');
-                setCurrency('tokens');
-                setIsPlacing(false);
-                setIsExpanded(false);
+                resetBetSlip();
               }}
               className="text-white/70 hover:text-white transition-colors"
             >

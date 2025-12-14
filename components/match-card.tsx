@@ -14,11 +14,14 @@ export function MatchCard({ match }: MatchCardProps) {
   const { selections, toggleSelection } = useBetStore();
 
   const handleOddsClick = (betType: BetType, odds: number) => {
+    console.log('[MatchCard] Odds clicked:', { matchId: match.id, betType, odds, currentSelections: selections.length });
     toggleSelection({ match, betType, odds });
+    console.log('[MatchCard] After toggle:', { selectionsCount: selections.length });
   };
 
   const isSelected = (betType: BetType) => {
-    return selections.some(s => s.match.id === match.id && s.betType === betType);
+    const selected = selections.some(s => s.match.id === match.id && s.betType === betType);
+    return selected;
   };
 
   const normalizeTeamName = (name: string) => {

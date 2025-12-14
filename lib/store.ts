@@ -68,11 +68,23 @@ export const useBetStore = create<BetState>((set, get) => ({
       s => s.match.id === selection.match.id && s.betType === selection.betType
     );
 
+    console.log('[BetStore] toggleSelection:', {
+      matchId: selection.match.id,
+      betType: selection.betType,
+      existing: !!existing,
+      currentSelections: state.selections.length
+    });
+
     if (existing) {
+      console.log('[BetStore] Removing selection:', selection.match.id);
       state.removeSelection(selection.match.id);
     } else {
+      console.log('[BetStore] Adding selection:', selection.match.id);
       state.addSelection(selection);
     }
+
+    const newState = get();
+    console.log('[BetStore] After toggle, selections:', newState.selections.length);
   },
 }));
 
