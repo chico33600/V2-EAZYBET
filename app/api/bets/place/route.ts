@@ -40,26 +40,6 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Cannot bet on this match. It has already started or finished.', 400);
     }
 
-    // Check daily bet limit (5 bets per day)
-    const { data: dailyBetsCount, error: countError } = await supabase
-      .rpc('get_user_daily_bets_count', {
-        p_user_id: user!.id,
-        p_target_date: new Date().toISOString().split('T')[0]
-      });
-
-    if (countError) {
-      console.error('Error checking daily bet limit:', countError);
-      return createErrorResponse('Failed to verify bet limit', 500);
-    }
-
-    const DAILY_BET_LIMIT = 5;
-    if (dailyBetsCount >= DAILY_BET_LIMIT) {
-      return createErrorResponse(
-        `Limite journalière atteinte ! Vous ne pouvez placer que ${DAILY_BET_LIMIT} paris par jour. Revenez demain pour parier à nouveau.`,
-        400
-      );
-    }
-
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('tokens, diamonds')
