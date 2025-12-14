@@ -46,35 +46,32 @@ export async function POST(request: NextRequest) {
     const todayISO = today.toISOString();
 
     // Count single bets for today
-    const { count: singleBetsCount, error: singleError } = await supabase
+    const { count: singleBetsCount, error: singleBetsError } = await supabase
       .from('bets')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user!.id)
-      .eq('is_combo', false)
       .gte('created_at', todayISO);
 
-    if (singleError) {
-      console.error('Error checking single bets:', singleError);
+    if (singleBetsError) {
+      console.error('Error checking single bets:', singleBetsError);
+      return createErrorResponse('Erreur lors de la vérification de la limite de paris', 500);
     }
 
-    // Count distinct combo bets for today
-    const { data: comboBets, error: comboError } = await supabase
-      .from('bets')
-      .select('combo_bet_id')
+    // Count combo bets for today
+    const { count: comboBetsCount, error: comboBetsError } = await supabase
+      .from('combo_bets')
+      .select('*', { count: 'exact', head: true })
       .eq('user_id', user!.id)
-      .eq('is_combo', true)
       .gte('created_at', todayISO);
 
-    if (comboError) {
-      console.error('Error checking combo bets:', comboError);
+    if (comboBetsError) {
+      console.error('Error checking combo bets:', comboBetsError);
+      return createErrorResponse('Erreur lors de la vérification de la limite de paris', 500);
     }
 
-    // Count unique combo_bet_ids
-    const uniqueComboBets = comboBets ? new Set(comboBets.map(b => b.combo_bet_id)).size : 0;
-    const totalBetsToday = (singleBetsCount || 0) + uniqueComboBets;
-
+    const totalBetsToday = (singleBetsCount || 0) + (comboBetsCount || 0);
     const DAILY_BET_LIMIT = 5;
-    console.log(`[BetLimit] User ${user!.id} has placed ${totalBetsToday} bets today (limit: ${DAILY_BET_LIMIT})`);
+    console.log(`[BetLimit] User ${user!.id} has placed ${totalBetsToday} bets today (${singleBetsCount} single + ${comboBetsCount} combo, limit: ${DAILY_BET_LIMIT})`);
 
     if (totalBetsToday >= DAILY_BET_LIMIT) {
       return createErrorResponse(
