@@ -1,16 +1,17 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useBetStore, useBetSlipUIStore } from '@/lib/store';
+import { useBetStore, useBetSlipUIStore, useUserStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
 import { placeBet, placeCombobet } from '@/lib/api-client';
-import { Coins, X, Gem } from 'lucide-react';
+import { Coins, X, Gem, Ticket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function BetSlip() {
   const { selections, removeSelection, clearSelections } = useBetStore();
   const { profile, refreshProfile } = useAuth();
   const { isExpanded, setIsExpanded } = useBetSlipUIStore();
+  const { dailyTickets } = useUserStore();
   const [amount, setAmount] = useState('');
   const [isPlacing, setIsPlacing] = useState(false);
   const [error, setError] = useState('');
@@ -342,6 +343,25 @@ export function BetSlip() {
             </>
           )}
 
+          {dailyTickets <= 0 && (
+            <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Ticket size={16} className="text-red-400" />
+                <p className="text-red-400 text-sm font-medium">Vous n'avez plus de tickets disponibles aujourd'hui</p>
+              </div>
+              <p className="text-red-300/70 text-xs mt-1">Limite de 5 paris par jour atteinte. Revenez demain pour parier à nouveau.</p>
+            </div>
+          )}
+
+          {dailyTickets > 0 && dailyTickets <= 2 && (
+            <div className="bg-yellow-500/10 border border-yellow-500/50 rounded-xl p-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Ticket size={16} className="text-yellow-400" />
+                <p className="text-yellow-400 text-sm font-medium">Il vous reste {dailyTickets} ticket{dailyTickets > 1 ? 's' : ''}</p>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-4 mb-4">
               <p className="text-red-400 text-sm mb-3">{error}</p>
@@ -362,11 +382,11 @@ export function BetSlip() {
         <div className="absolute bottom-20 left-0 right-0 p-6 bg-gradient-to-t from-[#1A1F27] via-[#1A1F27] to-transparent">
           <Button
             onClick={handlePlaceBet}
-            disabled={!betAmount || betAmount <= 0 || betAmount > availableBalance || isPlacing}
+            disabled={!betAmount || betAmount <= 0 || betAmount > availableBalance || isPlacing || dailyTickets <= 0}
             variant="eazy"
             className="w-full py-4 text-lg rounded-2xl active:scale-[0.98]"
           >
-            {isPlacing ? 'Placement en cours...' : isCombo ? 'Placer le pari combiné' : 'Placer le pari'}
+            {dailyTickets <= 0 ? 'Pas de tickets disponibles' : isPlacing ? 'Placement en cours...' : isCombo ? 'Placer le pari combiné' : 'Placer le pari'}
           </Button>
         </div>
       </div>

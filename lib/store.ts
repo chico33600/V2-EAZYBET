@@ -5,10 +5,12 @@ import { Match } from './mock-data';
 interface UserState {
   coins: number;
   diamonds: number;
+  dailyTickets: number;
   addCoins: (amount: number) => void;
   addDiamonds: (amount: number) => void;
   deductCoins: (amount: number) => void;
   deductDiamonds: (amount: number) => void;
+  setDailyTickets: (tickets: number) => void;
 }
 
 export const useUserStore = create<UserState>()(
@@ -16,10 +18,12 @@ export const useUserStore = create<UserState>()(
     (set) => ({
       coins: 1000.0,
       diamonds: 0,
+      dailyTickets: 5,
       addCoins: (amount) => set((state) => ({ coins: state.coins + amount })),
       addDiamonds: (amount) => set((state) => ({ diamonds: state.diamonds + amount })),
       deductCoins: (amount) => set((state) => ({ coins: Math.max(0, state.coins - amount) })),
       deductDiamonds: (amount) => set((state) => ({ diamonds: Math.max(0, state.diamonds - amount) })),
+      setDailyTickets: (tickets) => set({ dailyTickets: tickets }),
     }),
     {
       name: 'easybet-user-storage',

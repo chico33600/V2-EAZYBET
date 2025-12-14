@@ -2,6 +2,7 @@
 
 import { useUserStore } from '@/lib/store';
 import { Diamond } from 'lucide-react';
+import { HeaderTickets } from './header-tickets';
 
 export function Header() {
   const { coins, diamonds } = useUserStore();
@@ -14,13 +15,14 @@ export function Header() {
             <span className="bg-gradient-to-r from-[#C1322B] to-[#E84545] bg-clip-text text-transparent">Eazy</span>
             <span className="text-white">bet</span>
           </h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 bg-slate-900 px-3 py-1.5 rounded-lg">
               <span className="text-white font-semibold">{coins.toFixed(2)}</span>
             </div>
             <div className="flex items-center gap-1 bg-slate-900 px-3 py-1.5 rounded-lg">
               <Diamond size={16} className="text-blue-400 fill-blue-400" />
             </div>
+            <HeaderTickets />
           </div>
         </div>
 
