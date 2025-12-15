@@ -43,6 +43,14 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real', sportType?
   const daysAhead = getSportTimeHorizon(sportType);
   const futureDate = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
 
+  console.log('[fetchAvailableMatches] Parameters:', {
+    mode,
+    sportType,
+    daysAhead,
+    now: now.toISOString(),
+    futureDate: futureDate.toISOString()
+  });
+
   let query = supabase
     .from('matches')
     .select('*')
@@ -60,6 +68,12 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real', sportType?
   }
 
   const { data: matches, error } = await query;
+
+  console.log('[fetchAvailableMatches] Query result:', {
+    matchCount: matches?.length || 0,
+    error: error?.message,
+    firstMatch: matches?.[0]
+  });
 
   if (error) {
     console.error('Error fetching matches:', error);
@@ -93,6 +107,12 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real', sportType?
       }
     });
   }
+
+  console.log('[fetchAvailableMatches] Filtering:', {
+    totalMatches: matches?.length || 0,
+    bettedMatches: bettedMatchIds.size,
+    availableMatches: (matches || []).filter(match => !bettedMatchIds.has(match.id)).length
+  });
 
   return (matches || []).filter(match => !bettedMatchIds.has(match.id));
 }

@@ -154,9 +154,11 @@ export default function Home() {
 
   useEffect(() => {
     async function loadMatches() {
+      console.log('[Home] Loading matches for sport:', activeSport);
       setLoading(true);
       await updateMatchStatuses();
       const data = await fetchAvailableMatches('real', activeSport);
+      console.log('[Home] Loaded matches count:', data.length);
       setMatches(data);
       setLoading(false);
     }
@@ -178,6 +180,7 @@ export default function Home() {
     }
 
     if (user && activeTab === 'upcoming') {
+      console.log('[Home] Effect triggered - loading matches');
       loadMatches();
     } else if (user && activeTab === 'played') {
       loadActiveBets();
