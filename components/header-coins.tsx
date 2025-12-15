@@ -80,7 +80,7 @@ export function HeaderCoins({ onCoinsClick }: HeaderCoinsProps) {
   return (
     <div className="nav-top-fixed px-4 pt-4 pb-3 header-blur border-b border-[#30363D]/30">
       <div className="max-w-2xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => router.push('/profil')}
             aria-label="Aller au profil"
@@ -91,7 +91,7 @@ export function HeaderCoins({ onCoinsClick }: HeaderCoinsProps) {
             </span>
           </button>
 
-          <h1 className="text-2xl font-black tracking-tight select-none" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+          <h1 className="text-xl font-black tracking-tight select-none" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
             <span className="bg-gradient-to-r from-[#C1322B] to-[#E84545] bg-clip-text text-transparent">Eazy</span>
             <span className="text-white">bet</span>
           </h1>
