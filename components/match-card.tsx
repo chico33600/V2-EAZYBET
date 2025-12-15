@@ -131,7 +131,27 @@ export function MatchCard({ match }: MatchCardProps) {
     if (normalized.includes("nuggets") || normalized.includes("denver")) return "Denver Nuggets";
     if (normalized.includes("rockets") || normalized.includes("houston")) return "Houston Rockets";
     if (normalized.includes("clippers") && normalized.includes("angeles")) return "Los Angeles Clippers";
+    if (normalized.includes("lakers") && normalized.includes("angeles")) return "Los Angeles Lakers";
     if (normalized.includes("grizzlies") || normalized.includes("memphis")) return "Memphis Grizzlies";
+    if (normalized.includes("suns") || normalized.includes("phoenix")) return "Phoenix Suns";
+    if (normalized.includes("wizards") || normalized.includes("washington")) return "Washington Wizards";
+    if (normalized.includes("spurs") || normalized.includes("san antonio")) return "San Antonio Spurs";
+    if (normalized.includes("blazers") || normalized.includes("portland")) return "Portland Trail Blazers";
+    if (normalized.includes("raptors") || normalized.includes("toronto")) return "Toronto Raptors";
+    if (normalized.includes("kings") || normalized.includes("sacramento")) return "Sacramento Kings";
+    if (normalized.includes("timberwolves") || normalized.includes("minnesota")) return "Minnesota Timberwolves";
+    if (normalized.includes("magic") || normalized.includes("orlando")) return "Orlando Magic";
+    if (normalized.includes("thunder") || normalized.includes("oklahoma")) return "Oklahoma City Thunder";
+    if (normalized.includes("pelicans") || normalized.includes("new orleans")) return "New Orleans Pelicans";
+    if (normalized.includes("knicks") || normalized.includes("new york")) return "New York Knicks";
+    if (normalized.includes("bucks") || normalized.includes("milwaukee")) return "Milwaukee Bucks";
+    if (normalized.includes("heat") || normalized.includes("miami")) return "Miami Heat";
+    if (normalized.includes("bulls") || normalized.includes("chicago")) return "Chicago Bulls";
+    if (normalized.includes("pacers") || normalized.includes("indiana")) return "Indiana Pacers";
+    if (normalized.includes("warriors") || normalized.includes("golden state")) return "Golden State Warriors";
+    if (normalized.includes("cavaliers") || normalized.includes("cleveland")) return "Cleveland Cavaliers";
+    if (normalized.includes("hornets") || normalized.includes("charlotte")) return "Charlotte Hornets";
+    if (normalized.includes("pistons") || normalized.includes("detroit")) return "Detroit Pistons";
 
     return name;
   };
