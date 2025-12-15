@@ -11,17 +11,28 @@ interface Competition {
   sportKey: string;
   name: string;
   emoji: string;
+  sportType: 'soccer' | 'nba' | 'nfl' | 'mma';
 }
 
 const COMPETITIONS: Competition[] = [
-  { sportKey: 'soccer_france_ligue_one', name: 'Ligue 1', emoji: '🇫🇷' },
-  { sportKey: 'soccer_epl', name: 'Premier League', emoji: '🏴‍☠️' },
-  { sportKey: 'soccer_spain_la_liga', name: 'La Liga', emoji: '🇪🇸' },
-  { sportKey: 'soccer_italy_serie_a', name: 'Serie A', emoji: '🇮🇹' },
-  { sportKey: 'soccer_germany_bundesliga', name: 'Bundesliga', emoji: '🇩🇪' },
-  { sportKey: 'soccer_uefa_champs_league', name: 'Champions League', emoji: '⭐' },
-  { sportKey: 'soccer_uefa_europa_league', name: 'Europa League', emoji: '🏆' },
-  { sportKey: 'soccer_uefa_europa_conference_league', name: 'Europa Conference League', emoji: '🥉' },
+  // Football (Soccer)
+  { sportKey: 'soccer_france_ligue_one', name: 'Ligue 1', emoji: '🇫🇷', sportType: 'soccer' },
+  { sportKey: 'soccer_epl', name: 'Premier League', emoji: '🏴‍☠️', sportType: 'soccer' },
+  { sportKey: 'soccer_spain_la_liga', name: 'La Liga', emoji: '🇪🇸', sportType: 'soccer' },
+  { sportKey: 'soccer_italy_serie_a', name: 'Serie A', emoji: '🇮🇹', sportType: 'soccer' },
+  { sportKey: 'soccer_germany_bundesliga', name: 'Bundesliga', emoji: '🇩🇪', sportType: 'soccer' },
+  { sportKey: 'soccer_uefa_champs_league', name: 'Champions League', emoji: '⭐', sportType: 'soccer' },
+  { sportKey: 'soccer_uefa_europa_league', name: 'Europa League', emoji: '🏆', sportType: 'soccer' },
+  { sportKey: 'soccer_uefa_europa_conference_league', name: 'Europa Conference League', emoji: '🥉', sportType: 'soccer' },
+
+  // Basketball NBA
+  { sportKey: 'basketball_nba', name: 'NBA', emoji: '🏀', sportType: 'nba' },
+
+  // Football Américain NFL
+  { sportKey: 'americanfootball_nfl', name: 'NFL', emoji: '🏈', sportType: 'nfl' },
+
+  // MMA
+  { sportKey: 'mma_mixed_martial_arts', name: 'UFC', emoji: '🥊', sportType: 'mma' },
 ];
 
 Deno.serve(async (req: Request) => {
@@ -166,7 +177,8 @@ Deno.serve(async (req: Request) => {
                 match_date: matchDate.toISOString(),
                 competition: competition.name,
                 status: 'upcoming',
-                match_mode: 'real'
+                match_mode: 'real',
+                sport_type: competition.sportType
               });
 
             if (!insertError) {
