@@ -316,7 +316,7 @@ export default function Home() {
 
     if (activeTab === 'upcoming') {
       return (
-        <div className="mt-6">
+        <div className="mt-4">
           {competitionGroups.length === 0 ? (
             <>
               <div className="text-center py-16 px-4">
@@ -333,11 +333,6 @@ export default function Home() {
                   </p>
                 </div>
               </div>
-
-              <OtherSportsButton
-                currentSport={activeSport}
-                onSportSelect={(sport) => setActiveSport(sport as any)}
-              />
             </>
           ) : (
             <>
@@ -362,11 +357,6 @@ export default function Home() {
                   )}
                 </div>
               ))}
-
-              <OtherSportsButton
-                currentSport={activeSport}
-                onSportSelect={(sport) => setActiveSport(sport as any)}
-              />
             </>
           )}
         </div>
@@ -466,6 +456,13 @@ export default function Home() {
         <div className="px-4">
           <TabsMatchs activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
+
+        {activeTab === 'upcoming' && (
+          <OtherSportsButton
+            currentSport={activeSport}
+            onSportSelect={(sport) => setActiveSport(sport as any)}
+          />
+        )}
 
         {renderContent()}
 
