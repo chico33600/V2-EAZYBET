@@ -89,5 +89,15 @@ export const TEAM_BACKGROUNDS: Record<string, string> = {
   "Club Brugge": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762463931/Club_Bruge_rfz8aa.png",
   "SC Braga": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762463916/Braga_xt7yhy.png",
   "Benfica": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762463905/Benfica_jocktn.png",
-  "Ajax": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762463893/Ajax_wlh0xm.png"
+  "Ajax": "https://res.cloudinary.com/ddo7omht1/image/upload/v1762463893/Ajax_wlh0xm.png",
+
+  // 🏀 NBA
+  "Philadelphia 76ers": "https://res.cloudinary.com/ddo7omht1/image/upload/v1765806060/Philadeplhia_76ers_wo3wtr.png",
+  "Boston Celtics": "https://res.cloudinary.com/ddo7omht1/image/upload/v1765806057/Boston_Celtics_oc7grj.png",
+  "Utah Jazz": "https://res.cloudinary.com/ddo7omht1/image/upload/v1765806061/Utah_Jazz_wvrvgm.png",
+  "Dallas Mavericks": "https://res.cloudinary.com/ddo7omht1/image/upload/v1765806058/Dallas_Mavericks_bfvvyo.png",
+  "Denver Nuggets": "https://res.cloudinary.com/ddo7omht1/image/upload/v1765806058/Denver_Nuggets_nytsqm.png",
+  "Houston Rockets": "https://res.cloudinary.com/ddo7omht1/image/upload/v1765806058/Houston_Rockets_j9afaj.png",
+  "Los Angeles Clippers": "https://res.cloudinary.com/ddo7omht1/image/upload/v1765806058/Los_Angeles_Clippers_ew8x5e.png",
+  "Memphis Grizzlies": "https://res.cloudinary.com/ddo7omht1/image/upload/v1765806059/Memphis_Grizzlies_oiurtq.png"
 };

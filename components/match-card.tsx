@@ -123,6 +123,16 @@ export function MatchCard({ match }: MatchCardProps) {
     if (normalized.includes("benfica")) return "Benfica";
     if (normalized.includes("ajax")) return "Ajax";
 
+    // 🏀 NBA
+    if (normalized.includes("76ers") || normalized.includes("philadelphia")) return "Philadelphia 76ers";
+    if (normalized.includes("celtics") || normalized.includes("boston")) return "Boston Celtics";
+    if (normalized.includes("jazz") || normalized.includes("utah")) return "Utah Jazz";
+    if (normalized.includes("mavericks") || normalized.includes("dallas")) return "Dallas Mavericks";
+    if (normalized.includes("nuggets") || normalized.includes("denver")) return "Denver Nuggets";
+    if (normalized.includes("rockets") || normalized.includes("houston")) return "Houston Rockets";
+    if (normalized.includes("clippers") && normalized.includes("angeles")) return "Los Angeles Clippers";
+    if (normalized.includes("grizzlies") || normalized.includes("memphis")) return "Memphis Grizzlies";
+
     return name;
   };
 
@@ -169,10 +179,21 @@ export function MatchCard({ match }: MatchCardProps) {
           <div className="flex items-center justify-between mb-4">
             <div className="text-center flex-1">
               <div className="flex flex-col items-center gap-2 mb-1">
-                <div className="w-14 h-14 bg-gradient-to-br from-white/20 to-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/20">
-                  <span className="text-white font-bold text-lg">
-                    {match.homeTeam.substring(0, 3).toUpperCase()}
-                  </span>
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center backdrop-blur-sm border-2 border-white/30 shadow-2xl"
+                  style={{
+                    backgroundImage: homeBackground
+                      ? `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url(${homeBackground})`
+                      : 'linear-gradient(to br, rgba(255,255,255,0.2), rgba(255,255,255,0.1))',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center'
+                  }}
+                >
+                  {!homeBackground && (
+                    <span className="text-white font-bold text-lg">
+                      {match.homeTeam.substring(0, 3).toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <p className="text-white font-bold text-base leading-tight">{match.homeTeam}</p>
               </div>
@@ -191,10 +212,21 @@ export function MatchCard({ match }: MatchCardProps) {
 
             <div className="text-center flex-1">
               <div className="flex flex-col items-center gap-2 mb-1">
-                <div className="w-14 h-14 bg-gradient-to-br from-white/20 to-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/20">
-                  <span className="text-white font-bold text-lg">
-                    {match.awayTeam.substring(0, 3).toUpperCase()}
-                  </span>
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center backdrop-blur-sm border-2 border-white/30 shadow-2xl"
+                  style={{
+                    backgroundImage: awayBackground
+                      ? `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url(${awayBackground})`
+                      : 'linear-gradient(to br, rgba(255,255,255,0.2), rgba(255,255,255,0.1))',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center'
+                  }}
+                >
+                  {!awayBackground && (
+                    <span className="text-white font-bold text-lg">
+                      {match.awayTeam.substring(0, 3).toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <p className="text-white font-bold text-base leading-tight">{match.awayTeam}</p>
               </div>
