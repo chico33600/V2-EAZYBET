@@ -210,17 +210,22 @@ export const useBetSlipUIStore = create<BetSlipUIState>((set) => ({
 }));
 
 type HomeTab = 'upcoming' | 'played' | 'finished';
+type SportType = 'soccer' | 'nba' | 'nfl' | 'mma';
 
 interface NavigationState {
   activeHomeTab: HomeTab;
+  activeSport: SportType;
   setActiveHomeTab: (tab: HomeTab) => void;
+  setActiveSport: (sport: SportType) => void;
 }
 
 export const useNavigationStore = create<NavigationState>()(
   persist(
     (set) => ({
       activeHomeTab: 'upcoming',
+      activeSport: 'soccer',
       setActiveHomeTab: (tab) => set({ activeHomeTab: tab }),
+      setActiveSport: (sport) => set({ activeSport: sport }),
     }),
     {
       name: 'easybet-navigation-storage',

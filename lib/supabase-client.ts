@@ -100,6 +100,7 @@ export interface Match {
   team_b_banner?: string | null;
   team_a_stadium?: string | null;
   team_b_stadium?: string | null;
+  sport_type?: 'soccer' | 'nba' | 'nfl' | 'mma';
 }
 
 export interface Bet {

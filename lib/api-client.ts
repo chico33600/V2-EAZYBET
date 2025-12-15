@@ -21,7 +21,7 @@ export async function fetchMatches(status?: string): Promise<Match[]> {
   return data || [];
 }
 
-export async function fetchAvailableMatches(mode?: 'fictif' | 'real'): Promise<Match[]> {
+export async function fetchAvailableMatches(mode?: 'fictif' | 'real', sportType?: string): Promise<Match[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
@@ -38,6 +38,10 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real'): Promise<M
 
   if (mode) {
     query = query.eq('match_mode', mode);
+  }
+
+  if (sportType) {
+    query = query.eq('sport_type', sportType);
   }
 
   const { data: matches, error } = await query;

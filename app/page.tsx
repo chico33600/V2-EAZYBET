@@ -16,10 +16,11 @@ import { FinishedComboBetCard } from '@/components/finished-combo-bet-card';
 import { TutorialModal } from '@/components/tutorial-modal';
 import { PromoBanner } from '@/components/promo-banner';
 import { SplashScreen } from '@/components/splash-screen';
+import { OtherSportsButton } from '@/components/other-sports-button';
 import { supabase } from '@/lib/supabase-client';
 
 export default function Home() {
-  const { activeHomeTab: activeTab, setActiveHomeTab: setActiveTab } = useNavigationStore();
+  const { activeHomeTab: activeTab, setActiveHomeTab: setActiveTab, activeSport, setActiveSport } = useNavigationStore();
   const { hasNewBet, setHasNewBet } = useBadgeStore();
   const { showTutorial, setShowTutorial } = useTutorialStore();
   const [mounted, setMounted] = useState(false);
@@ -155,7 +156,7 @@ export default function Home() {
     async function loadMatches() {
       setLoading(true);
       await updateMatchStatuses();
-      const data = await fetchAvailableMatches('real');
+      const data = await fetchAvailableMatches('real', activeSport);
       setMatches(data);
       setLoading(false);
     }
@@ -186,7 +187,7 @@ export default function Home() {
       setMatches([]);
       setLoading(false);
     }
-  }, [activeTab, user]);
+  }, [activeTab, user, activeSport]);
 
   useEffect(() => {
     const handleBetPlaced = async () => {
@@ -194,7 +195,7 @@ export default function Home() {
 
       if (activeTab === 'upcoming') {
         await updateMatchStatuses();
-        const data = await fetchAvailableMatches('real');
+        const data = await fetchAvailableMatches('real', activeSport);
         setMatches(data);
       } else if (activeTab === 'played') {
         await updateMatchStatuses();
@@ -207,7 +208,7 @@ export default function Home() {
       console.log('[Home] Matches synced event received!');
       if (activeTab === 'upcoming') {
         await updateMatchStatuses();
-        const data = await fetchAvailableMatches('real');
+        const data = await fetchAvailableMatches('real', activeSport);
         setMatches(data);
         console.log('[Home] Reloaded matches:', data.length);
       }
@@ -219,7 +220,7 @@ export default function Home() {
       window.removeEventListener('bet-placed', handleBetPlaced);
       window.removeEventListener('matches-synced', handleMatchesSynced);
     };
-  }, [activeTab, setHasNewBet]);
+  }, [activeTab, activeSport, setHasNewBet]);
 
   // Mise à jour automatique des statuts toutes les 30 secondes
   useEffect(() => {
@@ -234,13 +235,13 @@ export default function Home() {
         const data = await getUserBets('active');
         setActiveBets(data);
       } else if (activeTab === 'upcoming') {
-        const data = await fetchAvailableMatches('real');
+        const data = await fetchAvailableMatches('real', activeSport);
         setMatches(data);
       }
     }, 30000); // 30 secondes
 
     return () => clearInterval(interval);
-  }, [user, activeTab]);
+  }, [user, activeTab, activeSport]);
 
   if (showSplash || !mounted || authLoading) {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
@@ -317,20 +318,27 @@ export default function Home() {
       return (
         <div className="mt-6">
           {competitionGroups.length === 0 ? (
-            <div className="text-center py-16 px-4">
-              <div className="bg-[#1A1F27] border border-[#30363D] rounded-2xl p-8 shadow-xl">
-                <p className="text-white text-lg font-semibold mb-2">Aucun match à venir</p>
-                <p className="text-gray-400 text-sm mb-4">
-                  Les prochains matchs apparaîtront ici !
-                </p>
-                <p className="text-yellow-400 text-xs">
-                  Les matchs sont synchronisés automatiquement depuis The Odds API.
-                </p>
-                <p className="text-gray-500 text-xs mt-2">
-                  Si vous êtes admin, utilisez le bouton "Sync API" dans le panel admin pour forcer une synchronisation.
-                </p>
+            <>
+              <div className="text-center py-16 px-4">
+                <div className="bg-[#1A1F27] border border-[#30363D] rounded-2xl p-8 shadow-xl">
+                  <p className="text-white text-lg font-semibold mb-2">Aucun match à venir</p>
+                  <p className="text-gray-400 text-sm mb-4">
+                    Les prochains matchs apparaîtront ici !
+                  </p>
+                  <p className="text-yellow-400 text-xs">
+                    Les matchs sont synchronisés automatiquement depuis The Odds API.
+                  </p>
+                  <p className="text-gray-500 text-xs mt-2">
+                    Si vous êtes admin, utilisez le bouton "Sync API" dans le panel admin pour forcer une synchronisation.
+                  </p>
+                </div>
               </div>
-            </div>
+
+              <OtherSportsButton
+                currentSport={activeSport}
+                onSportSelect={(sport) => setActiveSport(sport as any)}
+              />
+            </>
           ) : (
             <>
               {competitionGroups.map((group, index) => (
@@ -354,6 +362,11 @@ export default function Home() {
                   )}
                 </div>
               ))}
+
+              <OtherSportsButton
+                currentSport={activeSport}
+                onSportSelect={(sport) => setActiveSport(sport as any)}
+              />
             </>
           )}
         </div>
