@@ -21,19 +21,34 @@ export async function fetchMatches(status?: string): Promise<Match[]> {
   return data || [];
 }
 
+function getSportTimeHorizon(sportType?: string): number {
+  switch (sportType) {
+    case 'nba':
+      return 1;
+    case 'nfl':
+      return 3;
+    case 'mma':
+      return 5;
+    case 'soccer':
+    default:
+      return 7;
+  }
+}
+
 export async function fetchAvailableMatches(mode?: 'fictif' | 'real', sportType?: string): Promise<Match[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
   const now = new Date();
-  const fiveDaysFromNow = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+  const daysAhead = getSportTimeHorizon(sportType);
+  const futureDate = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
 
   let query = supabase
     .from('matches')
     .select('*')
     .eq('status', 'upcoming')
     .gt('match_date', now.toISOString())
-    .lte('match_date', fiveDaysFromNow.toISOString())
+    .lte('match_date', futureDate.toISOString())
     .order('match_date', { ascending: true });
 
   if (mode) {
