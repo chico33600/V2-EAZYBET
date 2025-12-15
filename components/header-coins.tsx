@@ -78,20 +78,20 @@ export function HeaderCoins({ onCoinsClick }: HeaderCoinsProps) {
   }, [coins, displayCoins, mounted]);
 
   return (
-    <div className="nav-top-fixed px-4 pt-4 pb-3 header-blur border-b border-[#30363D]/30">
+    <div className="nav-top-fixed px-3 sm:px-4 pt-3 sm:pt-4 pb-2 sm:pb-3 header-blur border-b border-[#30363D]/30">
       <div className="max-w-2xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <button
             onClick={() => router.push('/profil')}
             aria-label="Aller au profil"
-            className="w-10 h-10 rounded-full bg-gradient-to-br from-[#C1322B] to-[#8B1F1A] flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all active:scale-95"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#C1322B] to-[#8B1F1A] flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all active:scale-95"
           >
-            <span className="text-white font-bold text-lg">
+            <span className="text-white font-bold text-base sm:text-lg">
               {profile?.username?.charAt(0).toUpperCase() || 'U'}
             </span>
           </button>
 
-          <h1 className="text-xl font-black tracking-tight select-none" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+          <h1 className="text-lg sm:text-xl font-black tracking-tight select-none" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
             <span className="bg-gradient-to-r from-[#C1322B] to-[#E84545] bg-clip-text text-transparent">Eazy</span>
             <span className="text-white">bet</span>
           </h1>
