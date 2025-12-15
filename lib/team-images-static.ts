@@ -384,32 +384,6 @@ export const TEAM_IMAGES: { [key: string]: TeamImageData } = {
   'Bochum': {
     badge: 'https://www.thesportsdb.com/images/media/team/badge/default.png',
   },
-
-  // NBA Teams
-  'Philadelphia 76ers': {
-    badge: 'https://res.cloudinary.com/ddo7omht1/image/upload/v1765806060/Philadeplhia_76ers_wo3wtr.png',
-  },
-  'Boston Celtics': {
-    badge: 'https://res.cloudinary.com/ddo7omht1/image/upload/v1765806057/Boston_Celtics_oc7grj.png',
-  },
-  'Utah Jazz': {
-    badge: 'https://res.cloudinary.com/ddo7omht1/image/upload/v1765806061/Utah_Jazz_wvrvgm.png',
-  },
-  'Dallas Mavericks': {
-    badge: 'https://res.cloudinary.com/ddo7omht1/image/upload/v1765806058/Dallas_Mavericks_bfvvyo.png',
-  },
-  'Denver Nuggets': {
-    badge: 'https://res.cloudinary.com/ddo7omht1/image/upload/v1765806058/Denver_Nuggets_nytsqm.png',
-  },
-  'Houston Rockets': {
-    badge: 'https://res.cloudinary.com/ddo7omht1/image/upload/v1765806058/Houston_Rockets_j9afaj.png',
-  },
-  'Los Angeles Clippers': {
-    badge: 'https://res.cloudinary.com/ddo7omht1/image/upload/v1765806058/Los_Angeles_Clippers_ew8x5e.png',
-  },
-  'Memphis Grizzlies': {
-    badge: 'https://res.cloudinary.com/ddo7omht1/image/upload/v1765806059/Memphis_Grizzlies_oiurtq.png',
-  },
 };
 
 export function getTeamImages(teamName: string): TeamImageData | null {

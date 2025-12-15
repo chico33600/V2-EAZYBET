@@ -3,7 +3,6 @@
 import { Match } from '@/lib/mock-data';
 import { useBetStore, BetType } from '@/lib/store';
 import { TEAM_BACKGROUNDS } from '@/lib/team-backgrounds';
-import { getTeamImages } from '@/lib/team-images-static';
 import { MatchCountdown } from './match-countdown';
 
 interface MatchCardProps {
@@ -133,9 +132,6 @@ export function MatchCard({ match }: MatchCardProps) {
   const homeBackground = TEAM_BACKGROUNDS[homeTeamNormalized];
   const awayBackground = TEAM_BACKGROUNDS[awayTeamNormalized];
 
-  const homeTeamImages = getTeamImages(match.homeTeam);
-  const awayTeamImages = getTeamImages(match.awayTeam);
-
   const backgroundImage =
     homeBackground ||
     awayBackground ||
@@ -173,18 +169,10 @@ export function MatchCard({ match }: MatchCardProps) {
           <div className="flex items-center justify-between mb-4">
             <div className="text-center flex-1">
               <div className="flex flex-col items-center gap-2 mb-1">
-                <div className="w-14 h-14 bg-gradient-to-br from-white/20 to-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/20 overflow-hidden">
-                  {homeTeamImages?.badge ? (
-                    <img
-                      src={homeTeamImages.badge}
-                      alt={match.homeTeam}
-                      className="w-full h-full object-contain p-1"
-                    />
-                  ) : (
-                    <span className="text-white font-bold text-lg">
-                      {match.homeTeam.substring(0, 3).toUpperCase()}
-                    </span>
-                  )}
+                <div className="w-14 h-14 bg-gradient-to-br from-white/20 to-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/20">
+                  <span className="text-white font-bold text-lg">
+                    {match.homeTeam.substring(0, 3).toUpperCase()}
+                  </span>
                 </div>
                 <p className="text-white font-bold text-base leading-tight">{match.homeTeam}</p>
               </div>
@@ -203,18 +191,10 @@ export function MatchCard({ match }: MatchCardProps) {
 
             <div className="text-center flex-1">
               <div className="flex flex-col items-center gap-2 mb-1">
-                <div className="w-14 h-14 bg-gradient-to-br from-white/20 to-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/20 overflow-hidden">
-                  {awayTeamImages?.badge ? (
-                    <img
-                      src={awayTeamImages.badge}
-                      alt={match.awayTeam}
-                      className="w-full h-full object-contain p-1"
-                    />
-                  ) : (
-                    <span className="text-white font-bold text-lg">
-                      {match.awayTeam.substring(0, 3).toUpperCase()}
-                    </span>
-                  )}
+                <div className="w-14 h-14 bg-gradient-to-br from-white/20 to-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/20">
+                  <span className="text-white font-bold text-lg">
+                    {match.awayTeam.substring(0, 3).toUpperCase()}
+                  </span>
                 </div>
                 <p className="text-white font-bold text-base leading-tight">{match.awayTeam}</p>
               </div>
