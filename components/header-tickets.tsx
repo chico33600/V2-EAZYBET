@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase-client';
-import { useUserStore } from '@/lib/store';
+import { useUserStore, useCacheStore } from '@/lib/store';
 import { Ticket, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getTimeUntilMidnightParis } from '@/lib/timezone-utils';
@@ -13,7 +13,7 @@ export function HeaderTickets() {
   const [timeUntilReset, setTimeUntilReset] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [showResetTimer, setShowResetTimer] = useState(false);
 
-  const fetchTickets = async () => {
+  const fetchTickets = async (useCache: boolean = true) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -21,6 +21,17 @@ export function HeaderTickets() {
         return;
       }
 
+      const cachedCount = useCache ? useCacheStore.getState().getDailyBetsCountCache() : null;
+
+      if (cachedCount !== null) {
+        console.log('[HeaderTickets] Using cached daily bets count:', cachedCount);
+        const DAILY_BET_LIMIT = 5;
+        const ticketsRemaining = Math.max(0, DAILY_BET_LIMIT - cachedCount);
+        setDailyTickets(ticketsRemaining);
+        return;
+      }
+
+      console.log('[HeaderTickets] Fetching daily bets count from API');
       const { data: dailyBetsCount, error } = await supabase
         .rpc('get_user_daily_bets_count', {
           p_user_id: user.id,
@@ -37,6 +48,7 @@ export function HeaderTickets() {
       const count = (dailyBetsCount as number) || 0;
       const ticketsRemaining = Math.max(0, DAILY_BET_LIMIT - count);
 
+      useCacheStore.getState().setDailyBetsCountCache(count);
       setDailyTickets(ticketsRemaining);
     } catch (error) {
       console.error('Erreur lors de la récupération des tickets:', error);
@@ -47,9 +59,19 @@ export function HeaderTickets() {
   useEffect(() => {
     fetchTickets();
 
+    let isTabActive = true;
+
+    const handleVisibilityChange = () => {
+      isTabActive = !document.hidden;
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const intervalId = setInterval(() => {
-      fetchTickets();
-    }, 30000);
+      if (isTabActive) {
+        fetchTickets(false);
+      }
+    }, 60000);
 
     const timerIntervalId = setInterval(() => {
       const time = getTimeUntilMidnightParis();
@@ -57,7 +79,12 @@ export function HeaderTickets() {
     }, 1000);
 
     const handleBetPlaced = () => {
-      fetchTickets();
+      setIsAnimating(true);
+      decrementTicket();
+      fetchTickets(false);
+      setTimeout(() => {
+        setIsAnimating(false);
+      }, 800);
     };
 
     const handleTicketUsed = () => {
@@ -74,19 +101,20 @@ export function HeaderTickets() {
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      fetchTickets();
+      fetchTickets(false);
     });
 
     return () => {
       clearInterval(intervalId);
       clearInterval(timerIntervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       subscription?.unsubscribe();
       if (typeof window !== 'undefined') {
         window.removeEventListener('bet-placed', handleBetPlaced);
         window.removeEventListener('ticket-used', handleTicketUsed);
       }
     };
-  }, []);
+  }, [decrementTicket, setDailyTickets]);
 
   const ticketColor = dailyTickets === 0
     ? 'from-red-600/20 to-orange-600/20 border-red-500/30'

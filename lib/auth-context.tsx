@@ -1,9 +1,10 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { supabase } from './supabase-client';
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from './supabase-client';
+import { useCacheStore } from './store';
 
 interface AuthContextType {
   user: User | null;
@@ -22,11 +23,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchProfile = async (userId: string, forceRefresh: boolean = false) => {
+  const fetchProfile = async (userId: string, forceRefresh: boolean = false, useCache: boolean = true) => {
     try {
-      console.log(`[fetchProfile] Fetching profile for user ${userId}, forceRefresh: ${forceRefresh}`);
+      console.log(`[fetchProfile] Fetching profile for user ${userId}, forceRefresh: ${forceRefresh}, useCache: ${useCache}`);
 
+      if (!forceRefresh && useCache) {
+        const cachedProfile = useCacheStore.getState().getProfileCache();
+        if (cachedProfile) {
+          console.log('[fetchProfile] Using cached profile');
+          setProfile(cachedProfile);
+          return;
+        }
+      }
+
+      console.log('[fetchProfile] Fetching from API');
       const query = supabase
         .from('profiles')
         .select('*')
@@ -43,7 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log(`[fetchProfile] Loaded profile with ${data.tokens} tokens, diamonds: ${data.diamonds}, role: ${data.role}`);
         console.log('[fetchProfile] Setting profile state...');
         setProfile({ ...data });
-        console.log('[fetchProfile] Profile state updated');
+        useCacheStore.getState().setProfileCache(data);
+        console.log('[fetchProfile] Profile state and cache updated');
       } else {
         console.log('[fetchProfile] No profile data returned');
       }
@@ -54,11 +67,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = async () => {
     console.log('[refreshProfile] Called, user:', user?.id);
-    if (user) {
-      await fetchProfile(user.id, true);
-    } else {
-      console.log('[refreshProfile] No user to refresh');
+
+    if (refreshTimeoutRef.current) {
+      console.log('[refreshProfile] Debouncing - clearing previous timeout');
+      clearTimeout(refreshTimeoutRef.current);
     }
+
+    refreshTimeoutRef.current = setTimeout(async () => {
+      if (user) {
+        console.log('[refreshProfile] Executing refresh after debounce');
+        await fetchProfile(user.id, true, false);
+      } else {
+        console.log('[refreshProfile] No user to refresh');
+      }
+    }, 500);
   };
 
   const updateTokensOptimistic = (amount: number) => {

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Match } from './mock-data';
+import type { Match as SupabaseMatch } from './supabase-client';
 
 interface UserState {
   coins: number;
@@ -262,4 +263,115 @@ interface TutorialState {
 export const useTutorialStore = create<TutorialState>((set) => ({
   showTutorial: false,
   setShowTutorial: (show) => set({ showTutorial: show }),
+}));
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  ttl: number;
+}
+
+interface CacheState {
+  matchesBySport: Record<string, CacheEntry<SupabaseMatch[]>>;
+  activeBets: CacheEntry<any[]> | null;
+  historyBets: CacheEntry<any[]> | null;
+  profile: CacheEntry<any> | null;
+  dailyBetsCount: CacheEntry<number> | null;
+
+  setMatchesCache: (sport: string, data: SupabaseMatch[], ttl?: number) => void;
+  getMatchesCache: (sport: string) => SupabaseMatch[] | null;
+
+  setActiveBetsCache: (data: any[], ttl?: number) => void;
+  getActiveBetsCache: () => any[] | null;
+
+  setHistoryBetsCache: (data: any[], ttl?: number) => void;
+  getHistoryBetsCache: () => any[] | null;
+
+  setProfileCache: (data: any, ttl?: number) => void;
+  getProfileCache: () => any | null;
+
+  setDailyBetsCountCache: (count: number, ttl?: number) => void;
+  getDailyBetsCountCache: () => number | null;
+
+  clearCache: () => void;
+}
+
+const DEFAULT_TTL = {
+  matches: 2 * 60 * 1000,
+  bets: 1 * 60 * 1000,
+  profile: 30 * 1000,
+  dailyBets: 1 * 60 * 1000,
+};
+
+function isCacheValid<T>(entry: CacheEntry<T> | null): boolean {
+  if (!entry) return false;
+  return Date.now() - entry.timestamp < entry.ttl;
+}
+
+export const useCacheStore = create<CacheState>((set, get) => ({
+  matchesBySport: {},
+  activeBets: null,
+  historyBets: null,
+  profile: null,
+  dailyBetsCount: null,
+
+  setMatchesCache: (sport, data, ttl = DEFAULT_TTL.matches) => {
+    set((state) => ({
+      matchesBySport: {
+        ...state.matchesBySport,
+        [sport]: { data, timestamp: Date.now(), ttl }
+      }
+    }));
+  },
+
+  getMatchesCache: (sport) => {
+    const entry = get().matchesBySport[sport];
+    return isCacheValid(entry) ? entry.data : null;
+  },
+
+  setActiveBetsCache: (data, ttl = DEFAULT_TTL.bets) => {
+    set({ activeBets: { data, timestamp: Date.now(), ttl } });
+  },
+
+  getActiveBetsCache: () => {
+    const entry = get().activeBets;
+    return (entry && isCacheValid(entry)) ? entry.data : null;
+  },
+
+  setHistoryBetsCache: (data, ttl = DEFAULT_TTL.bets) => {
+    set({ historyBets: { data, timestamp: Date.now(), ttl } });
+  },
+
+  getHistoryBetsCache: () => {
+    const entry = get().historyBets;
+    return (entry && isCacheValid(entry)) ? entry.data : null;
+  },
+
+  setProfileCache: (data, ttl = DEFAULT_TTL.profile) => {
+    set({ profile: { data, timestamp: Date.now(), ttl } });
+  },
+
+  getProfileCache: () => {
+    const entry = get().profile;
+    return (entry && isCacheValid(entry)) ? entry.data : null;
+  },
+
+  setDailyBetsCountCache: (count, ttl = DEFAULT_TTL.dailyBets) => {
+    set({ dailyBetsCount: { data: count, timestamp: Date.now(), ttl } });
+  },
+
+  getDailyBetsCountCache: () => {
+    const entry = get().dailyBetsCount;
+    return (entry && isCacheValid(entry)) ? entry.data : null;
+  },
+
+  clearCache: () => {
+    set({
+      matchesBySport: {},
+      activeBets: null,
+      historyBets: null,
+      profile: null,
+      dailyBetsCount: null,
+    });
+  },
 }));

@@ -1,5 +1,6 @@
 import { supabase } from './supabase-client';
 import type { Match, Bet } from './supabase-client';
+import { useCacheStore } from './store';
 
 export async function fetchMatches(status?: string): Promise<Match[]> {
   let query = supabase
@@ -35,11 +36,25 @@ function getSportTimeHorizon(sportType?: string): number {
   }
 }
 
-export async function fetchAvailableMatches(mode?: 'fictif' | 'real', sportType?: string): Promise<Match[]> {
+export async function fetchAvailableMatches(mode?: 'fictif' | 'real', sportType?: string, useCache: boolean = true): Promise<Match[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
+  const cacheKey = `${mode || 'all'}_${sportType || 'all'}`;
+  const cachedData = useCache ? useCacheStore.getState().getMatchesCache(cacheKey) : null;
+
+  if (cachedData) {
+    console.log('[fetchAvailableMatches] Returning cached data for:', cacheKey);
+    return cachedData;
+  }
+
+  console.log('[fetchAvailableMatches] Cache miss, fetching from API for:', cacheKey);
+
   const now = new Date();
+  const nowISO = now.toISOString();
+
+  await updateMatchStatusesInternal(nowISO);
+
   const daysAhead = getSportTimeHorizon(sportType);
   const futureDate = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
 
@@ -47,7 +62,7 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real', sportType?
     mode,
     sportType,
     daysAhead,
-    now: now.toISOString(),
+    now: nowISO,
     futureDate: futureDate.toISOString()
   });
 
@@ -55,7 +70,7 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real', sportType?
     .from('matches')
     .select('*')
     .eq('status', 'upcoming')
-    .gt('match_date', now.toISOString())
+    .gt('match_date', nowISO)
     .lte('match_date', futureDate.toISOString())
     .order('match_date', { ascending: true });
 
@@ -114,7 +129,29 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real', sportType?
     availableMatches: (matches || []).filter(match => !bettedMatchIds.has(match.id)).length
   });
 
-  return (matches || []).filter(match => !bettedMatchIds.has(match.id));
+  const filteredMatches = (matches || []).filter(match => !bettedMatchIds.has(match.id));
+
+  useCacheStore.getState().setMatchesCache(cacheKey, filteredMatches);
+  console.log('[fetchAvailableMatches] Cached data for:', cacheKey);
+
+  return filteredMatches;
+}
+
+async function updateMatchStatusesInternal(now: string) {
+  console.log('[updateMatchStatuses] Updating match statuses at', now);
+
+  await supabase
+    .from('matches')
+    .update({ status: 'live' })
+    .eq('status', 'upcoming')
+    .lte('match_date', now);
+
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  await supabase
+    .from('matches')
+    .update({ status: 'finished' })
+    .in('status', ['upcoming', 'live'])
+    .lt('match_date', twoHoursAgo);
 }
 
 export async function placeBet(matchId: string, amount: number, choice: 'A' | 'Draw' | 'B', currency: 'tokens' | 'diamonds' = 'tokens') {
@@ -372,9 +409,27 @@ export async function placeCombobet(
   return comboBet;
 }
 
-export async function getUserBets(status?: 'active' | 'history'): Promise<any[]> {
+export async function getUserBets(status?: 'active' | 'history', useCache: boolean = true): Promise<any[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
+
+  const cacheStore = useCacheStore.getState();
+  let cachedData = null;
+
+  if (useCache) {
+    if (status === 'active') {
+      cachedData = cacheStore.getActiveBetsCache();
+    } else if (status === 'history') {
+      cachedData = cacheStore.getHistoryBetsCache();
+    }
+
+    if (cachedData) {
+      console.log('[getUserBets] Returning cached data for:', status);
+      return cachedData;
+    }
+  }
+
+  console.log('[getUserBets] Cache miss, fetching from API for:', status);
 
   let simpleBetsQuery = supabase
     .from('bets')
@@ -441,7 +496,28 @@ export async function getUserBets(status?: 'active' | 'history'): Promise<any[]>
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
+  if (status === 'active') {
+    cacheStore.setActiveBetsCache(allBets);
+  } else if (status === 'history') {
+    cacheStore.setHistoryBetsCache(allBets);
+  }
+
+  console.log('[getUserBets] Cached data for:', status);
+
   return allBets;
+}
+
+export function invalidateBetsCache() {
+  const cacheStore = useCacheStore.getState();
+  cacheStore.setActiveBetsCache([], 0);
+  cacheStore.setHistoryBetsCache([], 0);
+  console.log('[invalidateBetsCache] Bets cache invalidated');
+}
+
+export function invalidateMatchesCache() {
+  const cacheStore = useCacheStore.getState();
+  cacheStore.matchesBySport = {};
+  console.log('[invalidateMatchesCache] Matches cache invalidated');
 }
 
 export async function resetUserAccount() {

@@ -6,7 +6,7 @@ import { TabsMatchs } from '@/components/tabs-matchs';
 import { LeagueSection } from '@/components/league-section';
 import { BetSlip } from '@/components/bet-slip';
 import { useAuth } from '@/lib/auth-context';
-import { fetchMatches, fetchAvailableMatches, getUserBets } from '@/lib/api-client';
+import { fetchMatches, fetchAvailableMatches, getUserBets, invalidateBetsCache, invalidateMatchesCache } from '@/lib/api-client';
 import type { Match } from '@/lib/supabase-client';
 import { useNavigationStore, useBadgeStore, useTutorialStore } from '@/lib/store';
 import { ActiveBetCard } from '@/components/active-bet-card';
@@ -119,44 +119,10 @@ export default function Home() {
   };
 
 
-  // Fonction pour mettre à jour les statuts des matchs
-  const updateMatchStatuses = async () => {
-    const now = new Date().toISOString();
-    console.log('[Home] Updating match statuses at', now);
-
-    // Mettre à jour les matchs en "live"
-    const { error: liveError } = await supabase
-      .from('matches')
-      .update({ status: 'live' })
-      .eq('status', 'upcoming')
-      .lte('match_date', now);
-
-    if (liveError) {
-      console.error('[Home] Error updating to live:', liveError);
-    } else {
-      console.log('[Home] Updated matches to live status');
-    }
-
-    // Mettre à jour les matchs en "finished" (après 2h)
-    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-    const { error: finishedError } = await supabase
-      .from('matches')
-      .update({ status: 'finished' })
-      .in('status', ['upcoming', 'live'])
-      .lt('match_date', twoHoursAgo);
-
-    if (finishedError) {
-      console.error('[Home] Error updating to finished:', finishedError);
-    } else {
-      console.log('[Home] Updated matches to finished status');
-    }
-  };
-
   useEffect(() => {
     async function loadMatches() {
       console.log('[Home] Loading matches for sport:', activeSport);
       setLoading(true);
-      await updateMatchStatuses();
       const data = await fetchAvailableMatches('real', activeSport);
       console.log('[Home] Loaded matches count:', data.length);
       setMatches(data);
@@ -165,7 +131,6 @@ export default function Home() {
 
     async function loadActiveBets() {
       setLoading(true);
-      await updateMatchStatuses();
       const data = await getUserBets('active');
       setActiveBets(data);
       setLoading(false);
@@ -173,7 +138,6 @@ export default function Home() {
 
     async function loadFinishedBets() {
       setLoading(true);
-      await updateMatchStatuses();
       const data = await getUserBets('history');
       setFinishedBets(data);
       setLoading(false);
@@ -193,25 +157,34 @@ export default function Home() {
   }, [activeTab, user, activeSport]);
 
   useEffect(() => {
+    if (user) {
+      console.log('[Home] Preloading active bets on mount');
+      getUserBets('active').then(data => {
+        console.log('[Home] Preloaded active bets:', data.length);
+      });
+    }
+  }, [user]);
+
+  useEffect(() => {
     const handleBetPlaced = async () => {
       setHasNewBet(true);
+      invalidateBetsCache();
+      invalidateMatchesCache();
 
       if (activeTab === 'upcoming') {
-        await updateMatchStatuses();
-        const data = await fetchAvailableMatches('real', activeSport);
+        const data = await fetchAvailableMatches('real', activeSport, false);
         setMatches(data);
       } else if (activeTab === 'played') {
-        await updateMatchStatuses();
-        const data = await getUserBets('active');
+        const data = await getUserBets('active', false);
         setActiveBets(data);
       }
     };
 
     const handleMatchesSynced = async () => {
       console.log('[Home] Matches synced event received!');
+      invalidateMatchesCache();
       if (activeTab === 'upcoming') {
-        await updateMatchStatuses();
-        const data = await fetchAvailableMatches('real', activeSport);
+        const data = await fetchAvailableMatches('real', activeSport, false);
         setMatches(data);
         console.log('[Home] Reloaded matches:', data.length);
       }
@@ -225,25 +198,39 @@ export default function Home() {
     };
   }, [activeTab, activeSport, setHasNewBet]);
 
-  // Mise à jour automatique des statuts toutes les 30 secondes
   useEffect(() => {
     if (!user) return;
 
-    const interval = setInterval(async () => {
-      console.log('[Home] Auto-updating match statuses...');
-      await updateMatchStatuses();
+    let isTabActive = true;
 
-      // Recharger les données de l'onglet actif
+    const handleVisibilityChange = () => {
+      isTabActive = !document.hidden;
+      console.log('[Home] Tab visibility changed:', isTabActive ? 'active' : 'inactive');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const interval = setInterval(async () => {
+      if (!isTabActive) {
+        console.log('[Home] Skipping polling - tab is inactive');
+        return;
+      }
+
+      console.log('[Home] Auto-updating data...');
+
       if (activeTab === 'played') {
-        const data = await getUserBets('active');
+        const data = await getUserBets('active', false);
         setActiveBets(data);
       } else if (activeTab === 'upcoming') {
-        const data = await fetchAvailableMatches('real', activeSport);
+        const data = await fetchAvailableMatches('real', activeSport, false);
         setMatches(data);
       }
-    }, 30000); // 30 secondes
+    }, 60000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [user, activeTab, activeSport]);
 
   if (showSplash || !mounted || authLoading) {
