@@ -71,7 +71,7 @@ export function HeaderTickets() {
       if (isTabActive) {
         fetchTickets(false);
       }
-    }, 60000);
+    }, 120000);
 
     const timerIntervalId = setInterval(() => {
       const time = getTimeUntilMidnightParis();

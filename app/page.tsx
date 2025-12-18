@@ -157,37 +157,15 @@ export default function Home() {
   }, [activeTab, user, activeSport]);
 
   useEffect(() => {
-    if (user) {
-      console.log('[Home] Preloading active bets on mount');
-      getUserBets('active').then(data => {
-        console.log('[Home] Preloaded active bets:', data.length);
-      });
-    }
-  }, [user]);
-
-  useEffect(() => {
-    const handleBetPlaced = async () => {
+    const handleBetPlaced = () => {
       setHasNewBet(true);
       invalidateBetsCache();
       invalidateMatchesCache();
-
-      if (activeTab === 'upcoming') {
-        const data = await fetchAvailableMatches('real', activeSport, false);
-        setMatches(data);
-      } else if (activeTab === 'played') {
-        const data = await getUserBets('active', false);
-        setActiveBets(data);
-      }
     };
 
-    const handleMatchesSynced = async () => {
+    const handleMatchesSynced = () => {
       console.log('[Home] Matches synced event received!');
       invalidateMatchesCache();
-      if (activeTab === 'upcoming') {
-        const data = await fetchAvailableMatches('real', activeSport, false);
-        setMatches(data);
-        console.log('[Home] Reloaded matches:', data.length);
-      }
     };
 
     window.addEventListener('bet-placed', handleBetPlaced);
@@ -196,7 +174,7 @@ export default function Home() {
       window.removeEventListener('bet-placed', handleBetPlaced);
       window.removeEventListener('matches-synced', handleMatchesSynced);
     };
-  }, [activeTab, activeSport, setHasNewBet]);
+  }, [setHasNewBet]);
 
   useEffect(() => {
     if (!user) return;
@@ -210,28 +188,22 @@ export default function Home() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    const interval = setInterval(async () => {
+    const interval = setInterval(() => {
       if (!isTabActive) {
         console.log('[Home] Skipping polling - tab is inactive');
         return;
       }
 
-      console.log('[Home] Auto-updating data...');
-
-      if (activeTab === 'played') {
-        const data = await getUserBets('active', false);
-        setActiveBets(data);
-      } else if (activeTab === 'upcoming') {
-        const data = await fetchAvailableMatches('real', activeSport, false);
-        setMatches(data);
-      }
-    }, 60000);
+      console.log('[Home] Invalidating cache for auto-refresh...');
+      invalidateBetsCache();
+      invalidateMatchesCache();
+    }, 120000);
 
     return () => {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user, activeTab, activeSport]);
+  }, [user]);
 
   if (showSplash || !mounted || authLoading) {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;

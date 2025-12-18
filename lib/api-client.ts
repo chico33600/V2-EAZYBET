@@ -510,14 +510,19 @@ export async function getUserBets(status?: 'active' | 'history', useCache: boole
 export function invalidateBetsCache() {
   const cacheStore = useCacheStore.getState();
   cacheStore.setActiveBetsCache([], 0);
-  cacheStore.setHistoryBetsCache([], 0);
-  console.log('[invalidateBetsCache] Bets cache invalidated');
+  console.log('[invalidateBetsCache] Active bets cache invalidated');
 }
 
 export function invalidateMatchesCache() {
   const cacheStore = useCacheStore.getState();
   cacheStore.matchesBySport = {};
   console.log('[invalidateMatchesCache] Matches cache invalidated');
+}
+
+export function invalidateProfileCache() {
+  const cacheStore = useCacheStore.getState();
+  cacheStore.setProfileCache(null, 0);
+  console.log('[invalidateProfileCache] Profile cache invalidated');
 }
 
 export async function resetUserAccount() {

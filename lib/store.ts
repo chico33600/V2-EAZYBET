@@ -297,10 +297,10 @@ interface CacheState {
 }
 
 const DEFAULT_TTL = {
-  matches: 2 * 60 * 1000,
-  bets: 1 * 60 * 1000,
-  profile: 30 * 1000,
-  dailyBets: 1 * 60 * 1000,
+  matches: 5 * 60 * 1000,
+  bets: 3 * 60 * 1000,
+  profile: 2 * 60 * 1000,
+  dailyBets: 3 * 60 * 1000,
 };
 
 function isCacheValid<T>(entry: CacheEntry<T> | null): boolean {
