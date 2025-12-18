@@ -17,6 +17,7 @@ import { TutorialModal } from '@/components/tutorial-modal';
 import { PromoBanner } from '@/components/promo-banner';
 import { SplashScreen } from '@/components/splash-screen';
 import { OtherSportsButton } from '@/components/other-sports-button';
+import { WinNotificationModal } from '@/components/win-notification-modal';
 import { supabase } from '@/lib/supabase-client';
 
 export default function Home() {
@@ -29,6 +30,8 @@ export default function Home() {
   const [activeBets, setActiveBets] = useState<any[]>([]);
   const [finishedBets, setFinishedBets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showWinNotification, setShowWinNotification] = useState(false);
+  const [winDetails, setWinDetails] = useState({ tokens: 0, diamonds: 0 });
   const { user, profile, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -203,6 +206,77 @@ export default function Home() {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const LAST_WIN_CHECK_KEY = 'eazybet_last_win_check';
+    const WIN_NOTIFICATION_KEY = 'eazybet_shown_wins';
+
+    const checkForNewWins = async () => {
+      try {
+        const [simpleBetsResult, comboBetsResult] = await Promise.all([
+          supabase
+            .from('bets')
+            .select('id, tokens_won, diamonds_won, created_at, updated_at')
+            .eq('user_id', user.id)
+            .eq('is_win', true)
+            .gt('tokens_staked', 0)
+            .order('updated_at', { ascending: false })
+            .limit(3),
+          supabase
+            .from('combo_bets')
+            .select('id, tokens_won, diamonds_won, created_at, updated_at')
+            .eq('user_id', user.id)
+            .eq('is_win', true)
+            .gt('tokens_staked', 0)
+            .order('updated_at', { ascending: false })
+            .limit(3)
+        ]);
+
+        const allWins = [
+          ...(simpleBetsResult.data || []),
+          ...(comboBetsResult.data || [])
+        ].sort((a, b) => {
+          const timeA = new Date(a.updated_at || a.created_at).getTime();
+          const timeB = new Date(b.updated_at || b.created_at).getTime();
+          return timeB - timeA;
+        });
+
+        if (allWins.length === 0) return;
+
+        const shownWins = JSON.parse(localStorage.getItem(WIN_NOTIFICATION_KEY) || '[]');
+        const newWins = allWins.filter(win => !shownWins.includes(win.id));
+
+        if (newWins.length > 0) {
+          const latestWin = newWins[0];
+          const lastCheck = localStorage.getItem(LAST_WIN_CHECK_KEY);
+          const winTime = new Date(latestWin.updated_at || latestWin.created_at).getTime();
+          const lastCheckTime = lastCheck ? parseInt(lastCheck) : 0;
+
+          if (winTime > lastCheckTime) {
+            setWinDetails({
+              tokens: latestWin.tokens_won || 0,
+              diamonds: latestWin.diamonds_won || 0
+            });
+            setShowWinNotification(true);
+
+            shownWins.push(latestWin.id);
+            localStorage.setItem(WIN_NOTIFICATION_KEY, JSON.stringify(shownWins.slice(-20)));
+            localStorage.setItem(LAST_WIN_CHECK_KEY, Date.now().toString());
+          }
+        }
+      } catch (error) {
+        console.error('[Home] Error checking for wins:', error);
+      }
+    };
+
+    checkForNewWins();
+
+    const interval = setInterval(checkForNewWins, 30000);
+
+    return () => clearInterval(interval);
   }, [user]);
 
   if (showSplash || !mounted || authLoading) {
@@ -413,6 +487,12 @@ export default function Home() {
   return (
     <>
       <TutorialModal isOpen={showTutorial} onComplete={handleTutorialComplete} />
+      <WinNotificationModal
+        isOpen={showWinNotification}
+        onClose={() => setShowWinNotification(false)}
+        tokensWon={winDetails.tokens}
+        diamondsWon={winDetails.diamonds}
+      />
 
       <div className="max-w-2xl mx-auto">
         <div className="px-4">
