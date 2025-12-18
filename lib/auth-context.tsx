@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef, useCallback } from 'react';
 import { supabase } from './supabase-client';
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from './supabase-client';
@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchProfile = async (userId: string, forceRefresh: boolean = false, useCache: boolean = true) => {
+  const fetchProfile = useCallback(async (userId: string, forceRefresh: boolean = false, useCache: boolean = true) => {
     try {
       console.log(`[fetchProfile] Fetching profile for user ${userId}, forceRefresh: ${forceRefresh}, useCache: ${useCache}`);
 
@@ -63,9 +63,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('[fetchProfile] Exception:', err);
     }
-  };
+  }, []);
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     console.log('[refreshProfile] Called, user:', user?.id);
 
     if (refreshTimeoutRef.current) {
@@ -81,9 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('[refreshProfile] No user to refresh');
       }
     }, 500);
-  };
+  }, [user]);
 
-  const updateTokensOptimistic = (amount: number) => {
+  const updateTokensOptimistic = useCallback((amount: number) => {
     if (profile) {
       const newTokens = profile.tokens + amount;
       console.log(`[Optimistic Update] Current: ${profile.tokens}, Adding: ${amount}, New: ${newTokens}`);
@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tokens: newTokens
       });
     }
-  };
+  }, [profile]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {

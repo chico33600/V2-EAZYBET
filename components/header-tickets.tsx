@@ -76,7 +76,7 @@ export function HeaderTickets() {
     const timerIntervalId = setInterval(() => {
       const time = getTimeUntilMidnightParis();
       setTimeUntilReset(time);
-    }, 1000);
+    }, 5000);
 
     const handleBetPlaced = () => {
       setIsAnimating(true);
@@ -100,15 +100,10 @@ export function HeaderTickets() {
       window.addEventListener('ticket-used', handleTicketUsed);
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      fetchTickets(false);
-    });
-
     return () => {
       clearInterval(intervalId);
       clearInterval(timerIntervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      subscription?.unsubscribe();
       if (typeof window !== 'undefined') {
         window.removeEventListener('bet-placed', handleBetPlaced);
         window.removeEventListener('ticket-used', handleTicketUsed);
