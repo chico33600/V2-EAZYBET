@@ -83,14 +83,30 @@ Deno.serve(async (req: Request) => {
 
     console.log('✅ [SYNC] Match statuses updated');
 
-    // Step 1.5: Fetch new upcoming matches from API
-    console.log('🆕 [SYNC] Step 1.5: Fetching new upcoming matches...');
+    // Step 1.5: Check if we need to fetch new matches (throttle to reduce API calls)
+    console.log('🔍 [SYNC] Step 1.5: Checking if new matches fetch is needed...');
+
+    const { data: configData } = await supabase
+      .from('system_config')
+      .select('value')
+      .eq('key', 'last_matches_fetch')
+      .maybeSingle();
+
+    const lastFetchTime = configData?.value ? new Date(configData.value).getTime() : 0;
+    const currentTime = now.getTime();
+    const FETCH_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 
     let newMatchesInserted = 0;
     let matchesUpdated = 0;
     let apiCallsForMatches = 0;
 
-    for (const competition of COMPETITIONS) {
+    if (currentTime - lastFetchTime < FETCH_INTERVAL_MS) {
+      const minutesSinceLastFetch = Math.floor((currentTime - lastFetchTime) / 60000);
+      console.log(`⏭️ [SYNC] Skipping new matches fetch (last fetch: ${minutesSinceLastFetch} min ago, threshold: 30 min)`);
+    } else {
+      console.log('🆕 [SYNC] Fetching new upcoming matches from API...');
+
+      for (const competition of COMPETITIONS) {
       try {
         const oddsUrl = `https://api.the-odds-api.com/v4/sports/${competition.sportKey}/odds/?regions=eu&markets=h2h&apiKey=${oddsApiKey}`;
 
@@ -194,7 +210,21 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    console.log(`✅ [SYNC] New matches: ${newMatchesInserted}, Updated: ${matchesUpdated}, API calls: ${apiCallsForMatches}`);
+      console.log(`✅ [SYNC] New matches: ${newMatchesInserted}, Updated: ${matchesUpdated}, API calls: ${apiCallsForMatches}`);
+
+      // Update last fetch timestamp
+      await supabase
+        .from('system_config')
+        .upsert({
+          key: 'last_matches_fetch',
+          value: now.toISOString(),
+          updated_at: now.toISOString()
+        }, {
+          onConflict: 'key'
+        });
+
+      console.log('✅ [SYNC] Updated last_matches_fetch timestamp');
+    }
 
     console.log('🎯 [SYNC] Step 2: Check for finished matches without results');
 
