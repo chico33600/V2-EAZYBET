@@ -25,8 +25,6 @@ export default function AdminPage() {
 
   useEffect(() => {
     loadMatches();
-    const interval = setInterval(loadMatches, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   async function loadMatches() {

@@ -124,9 +124,6 @@ export function LeaderboardList({ viewMode = 'global' }: LeaderboardListProps) {
     }
   }, [profile?.id]);
 
-  useEffect(() => {
-    console.log('Entries state changed:', entries, 'Length:', entries.length);
-  }, [entries]);
 
   useEffect(() => {
     if (observerRef.current) {

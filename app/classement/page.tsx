@@ -32,7 +32,7 @@ export default function ClassementPage() {
 
   useEffect(() => {
     loadRequestsCount();
-    const interval = setInterval(loadRequestsCount, 30000);
+    const interval = setInterval(loadRequestsCount, 120000);
     return () => clearInterval(interval);
   }, [profile?.id]);
 

@@ -52,7 +52,7 @@ export function BetSlip() {
     };
 
     updateTimer();
-    const intervalId = setInterval(updateTimer, 1000);
+    const intervalId = setInterval(updateTimer, 5000);
 
     return () => clearInterval(intervalId);
   }, []);

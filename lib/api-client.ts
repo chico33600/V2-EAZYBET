@@ -53,8 +53,6 @@ export async function fetchAvailableMatches(mode?: 'fictif' | 'real', sportType?
   const now = new Date();
   const nowISO = now.toISOString();
 
-  await updateMatchStatusesInternal(nowISO);
-
   const daysAhead = getSportTimeHorizon(sportType);
   const futureDate = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
 

@@ -49,33 +49,35 @@ export function HeaderCoins({ onCoinsClick }: HeaderCoinsProps) {
   }, [mounted]);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || displayCoins === coins) return;
 
     console.log('[HeaderCoins] Coins changed:', { oldDisplay: displayCoins, newCoins: coins });
 
-    if (displayCoins !== coins && coins > displayCoins) {
+    if (coins > displayCoins) {
       console.log('[HeaderCoins] Animating increase from', displayCoins, 'to', coins);
       const diff = coins - displayCoins;
-      const steps = Math.min(diff, 20);
+      const steps = Math.min(diff, 15);
       const increment = diff / steps;
       let current = displayCoins;
+      let stepCount = 0;
 
       const interval = setInterval(() => {
+        stepCount++;
         current += increment;
-        if (current >= coins) {
+        if (stepCount >= steps || current >= coins) {
           setDisplayCoins(coins);
           clearInterval(interval);
         } else {
           setDisplayCoins(Math.round(current));
         }
-      }, 30);
+      }, 40);
 
       return () => clearInterval(interval);
-    } else if (displayCoins !== coins) {
+    } else {
       console.log('[HeaderCoins] Direct update from', displayCoins, 'to', coins);
       setDisplayCoins(coins);
     }
-  }, [coins, displayCoins, mounted]);
+  }, [coins, mounted]);
 
   return (
     <div className="nav-top-fixed px-3 sm:px-4 pt-3 sm:pt-4 pb-2 sm:pb-3 header-blur border-b border-[#30363D]/30">
