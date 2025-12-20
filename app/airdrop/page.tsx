@@ -41,6 +41,14 @@ export default function AirdropPage() {
         </div>
       </div>
 
+      <div className="glassmorphism rounded-3xl p-6 mb-6 border-2 border-[#F5C144]/20 overflow-hidden">
+        <img
+          src="/pixgenie_1765159614709.png"
+          alt="Cryptomonnaies"
+          className="w-full h-auto object-cover rounded-2xl"
+        />
+      </div>
+
       <div className="glassmorphism rounded-3xl p-6 mb-6 border-2 border-[#F5C144]/30 bg-gradient-to-br from-[#F5C144]/10 to-[#C1322B]/10">
         <div className="flex items-center gap-3 mb-4">
           <Sparkles className="w-6 h-6 text-[#F5C144]" />
