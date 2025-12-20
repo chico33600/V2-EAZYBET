@@ -153,6 +153,22 @@ export function MatchCard({ match }: MatchCardProps) {
     if (normalized.includes("hornets") || normalized.includes("charlotte")) return "Charlotte Hornets";
     if (normalized.includes("pistons") || normalized.includes("detroit")) return "Detroit Pistons";
 
+    // 🌍 CAN (Africa Cup of Nations)
+    if (normalized.includes("morocco") || normalized.includes("maroc")) return "Morocco";
+    if (normalized.includes("comoros") || normalized.includes("comores")) return "Comoros";
+    if (normalized.includes("mali")) return "Mali";
+    if (normalized.includes("senegal")) return "Senegal";
+    if (normalized.includes("south africa") || normalized.includes("afrique du sud")) return "South Africa";
+    if (normalized.includes("egypt") || normalized.includes("egypte")) return "Egypt";
+    if (normalized.includes("dr congo") || normalized.includes("congo")) return "DR Congo";
+    if (normalized.includes("tunisia") || normalized.includes("tunisie")) return "Tunisia";
+    if (normalized.includes("nigeria")) return "Nigeria";
+    if (normalized.includes("angola")) return "Angola";
+    if (normalized.includes("gabon")) return "Gabon";
+    if (normalized.includes("algeria") || normalized.includes("algerie")) return "Algeria";
+    if (normalized.includes("ivory coast") || normalized.includes("cote d'ivoire") || normalized.includes("cote divoire")) return "Ivory Coast";
+    if (normalized.includes("cameroon") || normalized.includes("cameroun")) return "Cameroon";
+
     return name;
   };
 

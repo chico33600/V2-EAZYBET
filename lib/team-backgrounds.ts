@@ -119,5 +119,21 @@ export const TEAM_BACKGROUNDS: Record<string, string> = {
   "Golden State Warriors": "https://res.cloudinary.com/ddo7omht1/image/upload/v1765806057/Golden_state_Warriors_a1ms2a.png",
   "Cleveland Cavaliers": "https://res.cloudinary.com/ddo7omht1/image/upload/v1765806058/Cleveland_Cavaliers_s6f7xx.png",
   "Charlotte Hornets": "https://res.cloudinary.com/ddo7omht1/image/upload/v1765806057/Charlotte_Hornets_ifqrsw.png",
-  "Detroit Pistons": "https://res.cloudinary.com/ddo7omht1/image/upload/v1765806056/Detroit_Pistons_yydn6r.png"
+  "Detroit Pistons": "https://res.cloudinary.com/ddo7omht1/image/upload/v1765806056/Detroit_Pistons_yydn6r.png",
+
+  // 🌍 CAN (Africa Cup of Nations)
+  "Morocco": "https://res.cloudinary.com/ddo7omht1/image/upload/v1766242614/Marrocco_al1mu5.png",
+  "Comoros": "https://res.cloudinary.com/ddo7omht1/image/upload/v1766242613/Comoros_b5cjgj.png",
+  "Mali": "https://res.cloudinary.com/ddo7omht1/image/upload/v1766242614/Mali_xzloqo.png",
+  "Senegal": "https://res.cloudinary.com/ddo7omht1/image/upload/v1766242615/Senegal_qlqqjr.png",
+  "South Africa": "https://res.cloudinary.com/ddo7omht1/image/upload/v1766242615/South_Africa_i2t4ru.png",
+  "Egypt": "https://res.cloudinary.com/ddo7omht1/image/upload/v1766242613/Egypt_c19qfx.png",
+  "DR Congo": "https://res.cloudinary.com/ddo7omht1/image/upload/v1766242613/DR_Congo_chm1z8.png",
+  "Tunisia": "https://res.cloudinary.com/ddo7omht1/image/upload/v1766242615/Tunisia_gxpyce.png",
+  "Nigeria": "https://res.cloudinary.com/ddo7omht1/image/upload/v1766242614/Nigeria_ddnkos.png",
+  "Angola": "https://res.cloudinary.com/ddo7omht1/image/upload/v1766242613/Angola_xiuzyj.png",
+  "Gabon": "https://res.cloudinary.com/ddo7omht1/image/upload/v1766242613/Gabon_q0m21m.png",
+  "Algeria": "https://res.cloudinary.com/ddo7omht1/image/upload/v1766242613/Alge%CC%81ria_b23zwn.png",
+  "Ivory Coast": "https://res.cloudinary.com/ddo7omht1/image/upload/v1766242614/Ivory_Coast_gc2bog.png",
+  "Cameroon": "https://res.cloudinary.com/ddo7omht1/image/upload/v1766242614/Cameroon_frukpv.png"
 };
