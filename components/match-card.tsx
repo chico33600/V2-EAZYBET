@@ -162,22 +162,16 @@ export function MatchCard({ match }: MatchCardProps) {
   const homeBackground = TEAM_BACKGROUNDS[homeTeamNormalized];
   const awayBackground = TEAM_BACKGROUNDS[awayTeamNormalized];
 
-  const shouldShowBackground = match.sport_type !== 'nfl' && match.sport_type !== 'mma';
-
   const backgroundImage =
     homeBackground ||
     awayBackground ||
     'https://images.pexels.com/photos/399187/pexels-photo-399187.jpeg';
 
-  const cardStyle = shouldShowBackground
-    ? {
-        backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(0,0,0,0.8)), url(${backgroundImage})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }
-    : {
-        background: 'linear-gradient(to bottom, #1a1a2e, #0f0f1e)',
-      };
+  const cardStyle = {
+    backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(0,0,0,0.8)), url(${backgroundImage})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  };
 
   return (
     <div
