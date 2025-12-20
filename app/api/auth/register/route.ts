@@ -39,35 +39,44 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Cet e-mail est déjà utilisé.', 400);
     }
 
-    // Create user account
-    const { data, error } = await supabase.auth.signUp({
+    // Create user account with admin API to bypass email confirmation
+    const { data: adminData, error: adminError } = await supabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: {
-          username,
-        },
+      email_confirm: true,
+      user_metadata: {
+        username,
       },
     });
 
-    if (error) {
-      if (error.message.includes('already registered') || error.message.includes('already exists')) {
+    if (adminError) {
+      if (adminError.message.includes('already registered') || adminError.message.includes('already exists')) {
         return createErrorResponse('Ce pseudo ou cet e-mail est déjà utilisé.', 400);
       }
-      return createErrorResponse(error.message, 400);
+      return createErrorResponse(adminError.message, 400);
     }
 
-    if (!data.user) {
+    if (!adminData.user) {
       return createErrorResponse('Failed to create user', 500);
+    }
+
+    // Sign in the user immediately after creation
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      return createErrorResponse('Utilisateur créé mais impossible de se connecter automatiquement. Veuillez vous connecter manuellement.', 201);
     }
 
     return createSuccessResponse({
       message: 'User registered successfully',
       user: {
-        id: data.user.id,
-        email: data.user.email,
+        id: adminData.user.id,
+        email: adminData.user.email,
       },
-      session: data.session,
+      session: signInData.session,
     }, 201);
 
   } catch (error: any) {
