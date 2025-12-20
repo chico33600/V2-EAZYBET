@@ -17,6 +17,7 @@ export interface Match {
   teamBBanner?: string | null;
   teamAStadium?: string | null;
   teamBStadium?: string | null;
+  sport_type?: 'soccer' | 'nba' | 'nfl' | 'mma';
 }
 
 export function generateDemoMatches() {
