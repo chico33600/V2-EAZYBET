@@ -24,6 +24,7 @@ const COMPETITIONS: Competition[] = [
   { sportKey: 'soccer_uefa_champs_league', name: 'Champions League', emoji: '⭐', sportType: 'soccer' },
   { sportKey: 'soccer_uefa_europa_league', name: 'Europa League', emoji: '🏆', sportType: 'soccer' },
   { sportKey: 'soccer_uefa_europa_conference_league', name: 'Europa Conference League', emoji: '🥉', sportType: 'soccer' },
+  { sportKey: 'soccer_africa_cup_of_nations', name: 'CAN', emoji: '🌍', sportType: 'soccer' },
 
   // Basketball NBA
   { sportKey: 'basketball_nba', name: 'NBA', emoji: '🏀', sportType: 'nba' },
