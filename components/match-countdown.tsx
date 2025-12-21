@@ -72,7 +72,7 @@ export function MatchCountdown({ datetime }: MatchCountdownProps) {
 
     const interval = setInterval(() => {
       setTimeRemaining(calculateTimeRemaining());
-    }, 5000);
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [datetime]);
